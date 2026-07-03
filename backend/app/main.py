@@ -27,15 +27,17 @@ app.add_middleware(
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_PATH = os.path.join(BASE_DIR, "model", "twinedge_rul.onnx")
 SCALER_PATH = os.path.join(BASE_DIR, "data", "processed", "scaler.joblib")
+RESULTS_PATH = os.path.join(BASE_DIR, "model", "results.json")
 
 # Global variables loaded at startup
 ort_session = None
 scaler = None
 influx_client = None
+metadata = {}
 
 @app.on_event("startup")
 def startup_event():
-    global ort_session, scaler, influx_client
+    global ort_session, scaler, influx_client, metadata
     
     # Load ONNX model
     if os.path.exists(MODEL_PATH):
@@ -56,6 +58,17 @@ def startup_event():
             print(f"Error loading scaler: {e}")
     else:
         print(f"Warning: Scaler not found at {SCALER_PATH}")
+
+    # Load metadata
+    if os.path.exists(RESULTS_PATH):
+        try:
+            with open(RESULTS_PATH, "r") as f:
+                metadata = json.load(f)
+            print(f"Loaded metadata successfully from {RESULTS_PATH}")
+        except Exception as e:
+            print(f"Error loading metadata: {e}")
+    else:
+        print(f"Warning: Metadata not found at {RESULTS_PATH}")
 
     # Setup InfluxDB client connection
     influx_url = os.getenv("INFLUXDB_URL", "http://localhost:8086")
@@ -78,7 +91,8 @@ def health():
         "status": "ok", 
         "message": "TwinEdge backend inference service running",
         "model_loaded": ort_session is not None,
-        "scaler_loaded": scaler is not None
+        "scaler_loaded": scaler is not None,
+        "metadata": metadata
     }
 
 @app.post("/predict")

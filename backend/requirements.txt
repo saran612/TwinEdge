@@ -6,8 +6,7 @@ influxdb-client
 pandas
 numpy
 scikit-learn
-tensorflow
-tf2onnx
+# tensorflow (commented out: not supported on Python 3.14, only needed for training/exporting)
+# tf2onnx (commented out: not supported on Python 3.14, only needed for training/exporting)
 python-multipart
 requests
-

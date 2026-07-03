@@ -3,7 +3,7 @@ version: '3.8'
 services:
   mosquitto:
     image: eclipse-mosquitto:2.0.18
-    container_name: aerotwin_mosquitto
+    container_name: twinedge_mosquitto
     ports:
       - "1883:1883"
     volumes:
@@ -12,14 +12,14 @@ services:
 
   influxdb:
     image: influxdb:2.7.6
-    container_name: aerotwin_influxdb
+    container_name: twinedge_influxdb
     ports:
       - "8086:8086"
     environment:
       - DOCKER_INFLUXDB_INIT_MODE=setup
       - DOCKER_INFLUXDB_INIT_USERNAME=admin
       - DOCKER_INFLUXDB_INIT_PASSWORD=adminpassword
-      - DOCKER_INFLUXDB_INIT_ORG=aerotwin
+      - DOCKER_INFLUXDB_INIT_ORG=twinedge
       - DOCKER_INFLUXDB_INIT_BUCKET=telemetry
       - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=my-super-secret-admin-token-12345
     volumes:
@@ -30,7 +30,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: aerotwin_backend
+    container_name: twinedge_backend
     ports:
       - "8000:8000"
     depends_on:
@@ -41,8 +41,30 @@ services:
       - MQTT_PORT=1883
       - INFLUXDB_URL=http://influxdb:8086
       - INFLUXDB_TOKEN=my-super-secret-admin-token-12345
-      - INFLUXDB_ORG=aerotwin
+      - INFLUXDB_ORG=twinedge
       - INFLUXDB_BUCKET=telemetry
+    volumes:
+      - ./backend:/app
+    restart: unless-stopped
+
+  subscriber:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: twinedge_subscriber
+    depends_on:
+      - mosquitto
+      - influxdb
+    environment:
+      - MQTT_HOST=mosquitto
+      - MQTT_PORT=1883
+      - INFLUXDB_URL=http://influxdb:8086
+      - INFLUXDB_TOKEN=my-super-secret-admin-token-12345
+      - INFLUXDB_ORG=twinedge
+      - INFLUXDB_BUCKET=telemetry
+    volumes:
+      - ./backend:/app
+    command: ["python3", "app/influx_writer.py"]
     restart: unless-stopped
 
 volumes:
