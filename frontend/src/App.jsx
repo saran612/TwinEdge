@@ -16,7 +16,9 @@ import {
   Clock,
   Check,
   X,
-  AlertCircle
+  AlertCircle,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { 
   LineChart, 
@@ -43,6 +45,21 @@ export default function App() {
   const [selectedEngineId, setSelectedEngineId] = useState(1);
   const [isOfflineDemo, setIsOfflineDemo] = useState(false);
   const [latency, setLatency] = useState(null);
+  
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('theme') || 'light';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('theme', theme);
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+      document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+  }, [theme]);
 
   // Poll server for health, telemetry and alerts
   useEffect(() => {
@@ -213,9 +230,9 @@ export default function App() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100 font-sans">
+    <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100 font-sans transition-colors duration-200">
       {/* Top Navbar */}
-      <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur-md sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
+      <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur-md sticky top-0 z-50 px-6 py-4 flex items-center justify-between transition-colors">
         <div className="flex items-center gap-3">
           <Layers className="h-8 w-8 text-indigo-500 animate-pulse" />
           <div>
@@ -226,6 +243,14 @@ export default function App() {
 
         {/* Network & Service status indicators */}
         <div className="flex items-center gap-6">
+          <button
+            onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+            className="flex items-center justify-center p-2 rounded-lg border border-slate-800 bg-slate-950 text-slate-100 hover:bg-slate-900 transition-colors cursor-pointer"
+            aria-label="Toggle theme"
+          >
+            {theme === 'light' ? <Moon className="h-4 w-4 text-indigo-500" /> : <Sun className="h-4 w-4 text-amber-500" />}
+          </button>
+
           <div className="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800 text-xs">
             <Cpu className="h-4 w-4 text-slate-400" />
             <span className="text-slate-400">Edge Inference:</span>
@@ -267,10 +292,10 @@ export default function App() {
       {/* Main Workspace Layout */}
       <div className="flex flex-1">
         {/* Left Sidebar Navigation */}
-        <nav className="w-64 border-r border-slate-800 bg-slate-900/20 p-4 flex flex-col gap-2">
+        <nav className="w-64 border-r border-slate-800 bg-slate-900/20 p-4 flex flex-col gap-2 transition-colors">
           <button 
             onClick={() => setActiveTab('queue')}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
               activeTab === 'queue' 
                 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/25' 
                 : 'text-slate-400 hover:bg-slate-900 hover:text-white'
@@ -287,7 +312,7 @@ export default function App() {
 
           <button 
             onClick={() => setActiveTab('twin')}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
               activeTab === 'twin' 
                 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/25' 
                 : 'text-slate-400 hover:bg-slate-900 hover:text-white'
@@ -299,7 +324,7 @@ export default function App() {
 
           <button 
             onClick={() => setActiveTab('telemetry')}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
               activeTab === 'telemetry' 
                 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/25' 
                 : 'text-slate-400 hover:bg-slate-900 hover:text-white'
@@ -311,7 +336,7 @@ export default function App() {
 
           <button 
             onClick={() => setActiveTab('diagnostics')}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
               activeTab === 'diagnostics' 
                 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/25' 
                 : 'text-slate-400 hover:bg-slate-900 hover:text-white'
@@ -325,9 +350,9 @@ export default function App() {
             <div className="text-[10px] uppercase font-bold tracking-wider text-slate-500 mb-2">Resilience Controls</div>
             <button 
               onClick={() => setIsOfflineDemo(!isOfflineDemo)}
-              className={`w-full text-xs font-semibold py-2 px-3 rounded-lg border transition-all ${
+              className={`w-full text-xs font-semibold py-2 px-3 rounded-lg border transition-all cursor-pointer ${
                 isOfflineDemo 
-                  ? 'bg-amber-600/20 border-amber-500 text-amber-300' 
+                  ? 'bg-amber-600/20 border-amber-500 text-amber-500' 
                   : 'border-slate-800 hover:border-slate-700 text-slate-400'
               }`}
             >
@@ -340,7 +365,7 @@ export default function App() {
         </nav>
 
         {/* Content Container */}
-        <main className="flex-1 p-8 bg-slate-950 overflow-y-auto">
+        <main className="flex-1 p-8 bg-slate-950 overflow-y-auto transition-colors">
           {/* TAB 1: AME SIGN-OFF QUEUE */}
           {activeTab === 'queue' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

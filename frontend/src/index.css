@@ -1,7 +1,84 @@
 @import "tailwindcss";
 
+:root {
+  /* Light theme (Default) */
+  --slate-50: #0f172a;
+  --slate-100: #1e293b;
+  --slate-200: #334155;
+  --slate-300: #475569;
+  --slate-400: #475569;
+  --slate-500: #64748b;
+  --slate-600: #94a3b8;
+  --slate-700: #cbd5e1;
+  --slate-800: #e2e8f0;
+  --slate-900: #ffffff;
+  --slate-950: #f8fafc;
+  --text-title: #0f172a;
+  
+  --indigo-text: #4f46e5;
+  --rose-text: #b91c1c;
+  --amber-text: #b45309;
+  --emerald-text: #047857;
+  
+  --navbar-bg: rgba(255, 255, 255, 0.8);
+  --sidebar-bg: rgba(241, 245, 249, 0.5);
+  --panel-bg: rgba(255, 255, 255, 0.7);
+}
+
+.dark {
+  /* Dark theme */
+  --slate-50: #f8fafc;
+  --slate-100: #f1f5f9;
+  --slate-200: #e2e8f0;
+  --slate-300: #cbd5e1;
+  --slate-400: #94a3b8;
+  --slate-500: #64748b;
+  --slate-600: #475569;
+  --slate-700: #334155;
+  --slate-800: #1e293b;
+  --slate-900: #0f172a;
+  --slate-950: #020617;
+  --text-title: #ffffff;
+  
+  --indigo-text: #818cf8;
+  --rose-text: #fca5a5;
+  --amber-text: #fde047;
+  --emerald-text: #34d399;
+  
+  --navbar-bg: rgba(15, 23, 42, 0.6);
+  --sidebar-bg: rgba(15, 23, 42, 0.2);
+  --panel-bg: rgba(15, 23, 42, 0.3);
+}
+
+@theme {
+  --color-slate-50: var(--slate-50);
+  --color-slate-100: var(--slate-100);
+  --color-slate-200: var(--slate-200);
+  --color-slate-300: var(--slate-300);
+  --color-slate-400: var(--slate-400);
+  --color-slate-500: var(--slate-500);
+  --color-slate-600: var(--slate-600);
+  --color-slate-700: var(--slate-700);
+  --color-slate-800: var(--slate-800);
+  --color-slate-900: var(--slate-900);
+  --color-slate-950: var(--slate-950);
+  
+  --color-white: var(--text-title);
+  
+  --color-indigo-400: var(--indigo-text);
+  --color-rose-300: var(--rose-text);
+  --color-rose-400: var(--rose-text);
+  --color-amber-300: var(--amber-text);
+  --color-amber-400: var(--amber-text);
+  --color-emerald-400: var(--emerald-text);
+  
+  --color-navbar-bg: var(--navbar-bg);
+  --color-sidebar-bg: var(--sidebar-bg);
+  --color-panel-bg: var(--panel-bg);
+}
+
 @layer base {
   body {
-    @apply bg-slate-950 text-slate-100 antialiased font-sans;
+    @apply bg-slate-950 text-slate-100 antialiased font-sans transition-colors duration-200;
   }
 }
