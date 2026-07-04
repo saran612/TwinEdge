@@ -1,5 +1,7 @@
 # TwinEdge: Edge-Native Digital Twin & AME Queue for Aircraft MRO
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-brightgreen?style=for-the-badge&logo=vercel)](https://twin-edge.vercel.app/)
+
 TwinEdge is an edge-native digital twin MRO (Maintenance, Repair, Overhaul) platform designed for disconnected operations at regional airports (UDAN-tier hangars) where cloud connectivity is unavailable or unreliable. Telemetry data is preprocessed, evaluated locally via ONNX Runtime using a 1D CNN model, and cached in a local time-series store (InfluxDB) with an offline SQLite buffer fallback. Flagged anomalies route to a human-in-the-loop sign-off queue for Aircraft Maintenance Engineers (AME).
 
 ---
@@ -73,7 +75,7 @@ cd frontend
 npm install
 npm run dev
 ```
-Open `http://localhost:5173` (or the port Vite prints) in your browser.
+Open `http://localhost:5173` (or the port Vite prints) in your browser, or open the live website at https://twin-edge.vercel.app/.
 
 ---
 
