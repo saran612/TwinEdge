@@ -87,11 +87,18 @@ class WindowInput(BaseModel):
 
 @app.get("/health")
 def health():
+    downstream_ok = False
+    if influx_client:
+        try:
+            downstream_ok = influx_client.ping()
+        except Exception:
+            downstream_ok = False
     return {
         "status": "ok", 
         "message": "TwinEdge backend inference service running",
         "model_loaded": ort_session is not None,
         "scaler_loaded": scaler is not None,
+        "downstream_connected": downstream_ok,
         "metadata": metadata
     }
 

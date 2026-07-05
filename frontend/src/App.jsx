@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Activity, 
   AlertTriangle, 
@@ -35,7 +35,9 @@ const BACKEND_URL = "http://localhost:8000";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('queue'); // AME queue is centerpiece
-  const [backendStatus, setBackendStatus] = useState('OFFLINE');
+  const [connectionState, setConnectionState] = useState('connected'); // 'connected' | 'offline_local' | 'backend_unreachable'
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const failCountRef = useRef(0);
   const [modelLoaded, setModelLoaded] = useState(false);
   const [telemetry, setTelemetry] = useState([]);
   const [alerts, setAlerts] = useState([]);
@@ -64,68 +66,108 @@ export default function App() {
   // Poll server for health, telemetry and alerts
   useEffect(() => {
     const fetchData = async () => {
-      try {
-        // 1. Health check
-        const healthRes = await fetch(`${BACKEND_URL}/health`);
-        if (healthRes.ok) {
-          const healthData = await healthRes.json();
-          setBackendStatus('ONLINE');
-          setModelLoaded(healthData.model_loaded);
-          setIsOfflineDemo(false);
-          if (healthData.metadata && healthData.metadata.mean_cpu_latency_ms) {
-            setLatency(`${healthData.metadata.mean_cpu_latency_ms.toFixed(3)} ms`);
-          } else {
-            setLatency('pending');
-          }
-        } else {
-          setBackendStatus('OFFLINE');
-          setLatency('—');
-        }
-      } catch (e) {
-        setBackendStatus('OFFLINE');
-        setIsOfflineDemo(true);
+      if (isOfflineDemo) {
+        setConnectionState('offline_local');
         setLatency('—');
+        
+        // Load from local storage cache
+        const cachedAlerts = localStorage.getItem('cached_alerts');
+        if (cachedAlerts) setAlerts(JSON.parse(cachedAlerts));
+
+        const cachedAuditLog = localStorage.getItem('cached_auditLog');
+        if (cachedAuditLog) setAuditLog(JSON.parse(cachedAuditLog));
+
+        const cachedTelemetry = localStorage.getItem('cached_telemetry');
+        if (cachedTelemetry) setTelemetry(JSON.parse(cachedTelemetry));
+        return;
       }
 
-      // 2. Fetch active alerts
       try {
-        const alertsRes = await fetch(`${BACKEND_URL}/alerts?unresolved_only=true`);
-        if (alertsRes.ok) {
-          const alertsData = await alertsRes.json();
-          setAlerts(alertsData);
+        // 1. Health check with 3-second timeout
+        const healthRes = await fetch(`${BACKEND_URL}/health`, { signal: AbortSignal.timeout(3000) });
+        if (!healthRes.ok) {
+          throw new Error('non-200');
         }
-      } catch (e) {
-        console.error("Alerts fetch error", e);
-      }
+        
+        const healthData = await healthRes.json();
+        failCountRef.current = 0;
+        setModelLoaded(healthData.model_loaded);
+        if (healthData.metadata && healthData.metadata.mean_cpu_latency_ms) {
+          setLatency(`${healthData.metadata.mean_cpu_latency_ms.toFixed(3)} ms`);
+        } else {
+          setLatency('pending');
+        }
 
-      // 3. Fetch all alerts for audit log
-      try {
-        const auditRes = await fetch(`${BACKEND_URL}/alerts?unresolved_only=false`);
-        if (auditRes.ok) {
-          const auditData = await auditRes.json();
-          // Filter to only resolved alerts
-          setAuditLog(auditData.filter(a => a.status !== 'PENDING'));
+        if (healthData.downstream_connected === false) {
+          setConnectionState('offline_local');
+        } else {
+          setConnectionState('connected');
         }
-      } catch (e) {
-        console.error("Audit log fetch error", e);
-      }
+        setLastUpdated(new Date());
 
-      // 4. Fetch recent telemetry
-      try {
-        const telRes = await fetch(`${BACKEND_URL}/telemetry/recent`);
-        if (telRes.ok) {
-          const telData = await telRes.json();
-          setTelemetry(telData);
+        // 2. Fetch active alerts
+        try {
+          const alertsRes = await fetch(`${BACKEND_URL}/alerts?unresolved_only=true`, { signal: AbortSignal.timeout(3000) });
+          if (alertsRes.ok) {
+            const alertsData = await alertsRes.json();
+            setAlerts(alertsData);
+            localStorage.setItem('cached_alerts', JSON.stringify(alertsData));
+          }
+        } catch (e) {
+          console.error("Alerts fetch error", e);
+        }
+
+        // 3. Fetch all alerts for audit log
+        try {
+          const auditRes = await fetch(`${BACKEND_URL}/alerts?unresolved_only=false`, { signal: AbortSignal.timeout(3000) });
+          if (auditRes.ok) {
+            const auditData = await auditRes.json();
+            const filteredAudit = auditData.filter(a => a.status !== 'PENDING');
+            setAuditLog(filteredAudit);
+            localStorage.setItem('cached_auditLog', JSON.stringify(filteredAudit));
+          }
+        } catch (e) {
+          console.error("Audit log fetch error", e);
+        }
+
+        // 4. Fetch recent telemetry
+        try {
+          const telRes = await fetch(`${BACKEND_URL}/telemetry/recent`, { signal: AbortSignal.timeout(3000) });
+          if (telRes.ok) {
+            const telData = await telRes.json();
+            setTelemetry(telData);
+            localStorage.setItem('cached_telemetry', JSON.stringify(telData));
+          }
+        } catch (e) {
+          console.error("Telemetry fetch error", e);
         }
       } catch (e) {
-        console.error("Telemetry fetch error", e);
+        failCountRef.current += 1;
+        if (failCountRef.current >= 3) {
+          setConnectionState('backend_unreachable');
+          setLatency('—');
+          // FREEZE values: Do NOT fetch or load mock data. Keep currently displayed states.
+        } else {
+          setConnectionState('offline_local');
+          setLatency('—');
+          
+          // Load cache fallback for non-unreachable state
+          const cachedAlerts = localStorage.getItem('cached_alerts');
+          if (cachedAlerts) setAlerts(JSON.parse(cachedAlerts));
+
+          const cachedAuditLog = localStorage.getItem('cached_auditLog');
+          if (cachedAuditLog) setAuditLog(JSON.parse(cachedAuditLog));
+
+          const cachedTelemetry = localStorage.getItem('cached_telemetry');
+          if (cachedTelemetry) setTelemetry(JSON.parse(cachedTelemetry));
+        }
       }
     };
 
     fetchData();
     const interval = setInterval(fetchData, 2500); // 2.5s polling
     return () => clearInterval(interval);
-  }, []);
+  }, [isOfflineDemo]);
 
   // Handle AME Sign-off
   const handleSignoff = async (alertId, status) => {
@@ -273,16 +315,29 @@ export default function App() {
             )}
           </div>
 
+          {lastUpdated && connectionState !== 'connected' && (
+            <div className="text-[10px] text-slate-500 font-mono">
+              Last updated: {lastUpdated.toLocaleTimeString()}
+            </div>
+          )}
+
           <div className="flex items-center gap-2 text-xs">
-            {backendStatus === 'ONLINE' ? (
+            {connectionState === 'connected' && (
               <span className="flex items-center gap-2 bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg font-bold">
                 <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-ping"></span>
                 Connected
               </span>
-            ) : (
+            )}
+            {connectionState === 'offline_local' && (
+              <span className="flex items-center gap-2 bg-amber-500/15 text-amber-400 border border-amber-500/30 px-3 py-1.5 rounded-lg font-bold animate-pulse">
+                <span className="h-2.5 w-2.5 rounded-full bg-amber-500 animate-ping"></span>
+                Offline — Running on Local Cache
+              </span>
+            )}
+            {connectionState === 'backend_unreachable' && (
               <span className="flex items-center gap-2 bg-rose-500/15 text-rose-400 border border-rose-500/30 px-3 py-1.5 rounded-lg font-bold animate-pulse">
                 <span className="h-2.5 w-2.5 rounded-full bg-rose-500"></span>
-                Offline — running on local cache
+                ⚠ Backend Unreachable
               </span>
             )}
           </div>
@@ -570,9 +625,23 @@ export default function App() {
           {activeTab === 'twin' && (
             <div className="space-y-8">
               <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold tracking-tight text-white">Live Twin View</h2>
-                  <p className="text-sm text-slate-400">Turbofan engine sensor mapping and active diagnostic hotspots.</p>
+                <div className="flex items-center gap-3">
+                  <div>
+                    <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
+                      Live Twin View
+                      {connectionState === 'offline_local' && (
+                        <span className="bg-amber-500/15 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider animate-pulse">
+                          Offline (Cached)
+                        </span>
+                      )}
+                      {connectionState === 'backend_unreachable' && (
+                        <span className="bg-rose-500/15 text-rose-400 border border-rose-500/30 px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider animate-pulse">
+                          ⚠ Backend Unreachable (Frozen)
+                        </span>
+                      )}
+                    </h2>
+                    <p className="text-sm text-slate-400">Turbofan engine sensor mapping and active diagnostic hotspots.</p>
+                  </div>
                 </div>
                 
                 <div className="flex items-center gap-3">
@@ -597,9 +666,17 @@ export default function App() {
                   <div className="text-[10px] text-slate-400 mt-1">Total recorded flight cycles</div>
                 </div>
                 <div className="border border-slate-800 rounded-2xl p-5 bg-slate-900/20">
-                  <div className="text-xs text-slate-500 font-semibold uppercase">Current Health Score</div>
+                  <div className="text-xs text-slate-500 font-semibold uppercase flex justify-between items-center">
+                    <span>Current Health Score</span>
+                    {connectionState === 'offline_local' && (
+                      <span className="text-[9px] bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800 text-amber-400">Cached</span>
+                    )}
+                    {connectionState === 'backend_unreachable' && (
+                      <span className="text-[9px] bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800 text-rose-400">Frozen</span>
+                    )}
+                  </div>
                   <div className="text-3xl font-bold text-indigo-400 mt-2 font-mono">
-                    {backendStatus === 'ONLINE' ? `${((currentTwin.rul / 125) * 100).toFixed(0)}%` : '—'}
+                    {currentTwin && currentTwin.rul !== undefined ? `${((currentTwin.rul / 125) * 100).toFixed(0)}%` : '—'}
                   </div>
                   <div className="text-[10px] text-slate-400 mt-1">Derived from latest RUL</div>
                 </div>
