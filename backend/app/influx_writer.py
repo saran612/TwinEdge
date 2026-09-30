@@ -45,7 +45,7 @@ def buffer_locally(engine_id, cycle, timestamp, payload):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO telemetry_buffer (engine_id, cycle, timestamp, payload)
+        INSERT OR REPLACE INTO telemetry_buffer (engine_id, cycle, timestamp, payload)
         VALUES (?, ?, ?, ?)
     """, (engine_id, cycle, timestamp, json.dumps(payload)))
     conn.commit()
@@ -125,11 +125,22 @@ def on_message(client, userdata, msg):
         topic = msg.topic
         
         if topic == "twinedge/telemetry":
-            engine_id = payload["engine_id"]
-            cycle = payload["cycle"]
-            timestamp = payload.get("timestamp", datetime.utcnow().isoformat())
-            rul_prediction = payload["rul_prediction"]
-            anomaly_flag = payload["anomaly_flag"]
+            engine_id = payload.get("engine_id", payload.get("unit", 1))
+            cycle = payload.get("cycle", 1)
+            raw_ts = payload.get("timestamp")
+            if isinstance(raw_ts, (int, float)):
+                dt = datetime.utcfromtimestamp(raw_ts)
+            elif isinstance(raw_ts, str):
+                try:
+                    dt = datetime.fromisoformat(raw_ts.replace("Z", "+00:00"))
+                except Exception:
+                    dt = datetime.utcnow()
+            else:
+                dt = datetime.utcnow()
+            timestamp = dt.isoformat()
+
+            rul_prediction = payload.get("rul_prediction", 125.0)
+            anomaly_flag = payload.get("anomaly_flag", 0)
             sensors = payload.get("sensors", [])
             
             # Check InfluxDB status
@@ -140,7 +151,6 @@ def on_message(client, userdata, msg):
             if is_influx_online and write_api:
                 try:
                     # Write to InfluxDB
-                    dt = datetime.fromisoformat(timestamp)
                     point = Point("telemetry") \
                         .tag("engine_id", str(engine_id)) \
                         .tag("cycle", str(cycle)) \

@@ -8,9 +8,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
+import sqlite3
 from influxdb_client import InfluxDBClient
 
-from app.db import get_unresolved_alerts, get_all_alerts, signoff_alert, add_alert
+from app.db import get_unresolved_alerts, get_all_alerts, signoff_alert, add_alert, DB_PATH
 
 app = FastAPI(title="TwinEdge Backend")
 
@@ -79,11 +80,23 @@ def startup_event():
     except Exception as e:
         print(f"Failed to connect to InfluxDB: {e}")
 
+last_simulator_mqtt_status = None
+
+def check_mqtt_broker() -> bool:
+    import socket
+    try:
+        sock = socket.create_connection(("localhost", 1883), timeout=0.3)
+        sock.close()
+        return True
+    except Exception:
+        return False
+
 class WindowInput(BaseModel):
     engine_id: int
     cycle: int
     # 30 cycles of 14 active sensor values
     window: List[List[float]]
+    mqtt_active: Optional[bool] = None
 
 @app.get("/health")
 def health():
@@ -93,21 +106,31 @@ def health():
             downstream_ok = influx_client.ping()
         except Exception:
             downstream_ok = False
+
+    mqtt_broker_ok = check_mqtt_broker()
+    pipeline_bypass = (not mqtt_broker_ok) or (last_simulator_mqtt_status is False)
+
     return {
         "status": "ok", 
         "message": "TwinEdge backend inference service running",
         "model_loaded": ort_session is not None,
         "scaler_loaded": scaler is not None,
         "downstream_connected": downstream_ok,
+        "mqtt_broker_online": mqtt_broker_ok,
+        "pipeline_bypass": pipeline_bypass,
+        "pipeline_mode": "http_bypass" if pipeline_bypass else "mqtt_pipeline",
         "metadata": metadata
     }
 
 @app.post("/predict")
 def predict(data: WindowInput):
-    global ort_session, scaler
+    global ort_session, scaler, last_simulator_mqtt_status
     if ort_session is None or scaler is None:
         raise HTTPException(status_code=503, detail="Model or Scaler not loaded on server.")
         
+    if data.mqtt_active is not None:
+        last_simulator_mqtt_status = data.mqtt_active
+
     try:
         # Check window shape: must be (30, 14)
         window_arr = np.array(data.window, dtype=np.float32)
@@ -133,7 +156,10 @@ def predict(data: WindowInput):
         rul_pred = max(0.0, min(125.0, rul_pred))
         
         # 4. Determine anomaly flag
-        # Rule: RUL < 60 cycles marks an operational warning/alert
+        # NOTE (Threshold Justification): 60 cycles is a conservative operational
+        # heuristic calibrated to trigger maintenance lead time ahead of scheduled
+        # A/B-check intervals. Pending full empirical ROC / cost-sensitivity tuning
+        # against airline operational loss functions.
         anomaly_flag = int(rul_pred < 60)
         
         # 5. Compute confidence score
@@ -152,6 +178,27 @@ def predict(data: WindowInput):
                 anomaly_flag=anomaly_flag
             )
 
+        # 7. Ingest telemetry into local SQLite buffer (idempotent upsert)
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+            curr_sensors = data.window[-1] if len(data.window) > 0 else []
+            t_payload = {
+                "engine_id": data.engine_id,
+                "cycle": data.cycle,
+                "rul_prediction": round(rul_pred, 1),
+                "anomaly_flag": anomaly_flag,
+                "sensors": curr_sensors
+            }
+            cursor.execute("""
+                INSERT OR REPLACE INTO telemetry_buffer (engine_id, cycle, timestamp, payload)
+                VALUES (?, ?, ?, ?)
+            """, (data.engine_id, data.cycle, datetime.utcnow().isoformat(), json.dumps(t_payload)))
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            print(f"Error buffering telemetry in predict: {e}")
+
         return {
             "rul_prediction": round(rul_pred, 2),
             "anomaly_flag": anomaly_flag,
@@ -164,44 +211,87 @@ def predict(data: WindowInput):
         raise HTTPException(status_code=500, detail=f"Inference error: {str(e)}")
 
 
-# H1. GET /telemetry/recent - last N telemetry points from InfluxDB
+# H1. GET /telemetry/recent - last N telemetry points from InfluxDB (with SQLite fallback)
 @app.get("/telemetry/recent")
 def get_recent_telemetry(engine_id: Optional[int] = None, limit: int = 50):
     global influx_client
-    if influx_client is None:
-        return []
-        
+    records = []
+    if influx_client is not None:
+        try:
+            query_api = influx_client.query_api()
+            
+            # Query sensor data from InfluxDB
+            filter_engine = f'r.engine_id == "{engine_id}"' if engine_id else 'true'
+            flux_query = f'''
+            from(bucket: "telemetry")
+              |> range(start: -1h)
+              |> filter(fn: (r) => r["_measurement"] == "telemetry")
+              |> filter(fn: (r) => {filter_engine})
+              |> limit(n: {limit})
+            '''
+            
+            tables = query_api.query(flux_query)
+            for table in tables:
+                for record in table.records:
+                    engine_id_val = record.values.get("engine_id")
+                    cycle_val = record.values.get("cycle")
+                    records.append({
+                        "time": record.get_time().isoformat() if record.get_time() else datetime.utcnow().isoformat(),
+                        "engine_id": int(engine_id_val) if engine_id_val is not None else 0,
+                        "cycle": int(cycle_val) if cycle_val is not None else 0,
+                        "sensor": record.get_field(),
+                        "value": record.get_value()
+                    })
+
+            if records:
+                return records
+        except Exception as e:
+            # Fallback: log and check local SQLite buffer
+            print(f"InfluxDB read error (falling back to SQLite buffer): {e}")
+
+    # Fallback: Query local SQLite telemetry buffer
     try:
-        query_api = influx_client.query_api()
-        
-        # Query sensor data from InfluxDB
-        filter_engine = f'r.engine_id == "{engine_id}"' if engine_id else 'true'
-        flux_query = f'''
-        from(bucket: "telemetry")
-          |> range(start: -1h)
-          |> filter(fn: (r) => r["_measurement"] == "telemetry")
-          |> filter(fn: (r) => {filter_engine})
-          |> limit(n: {limit})
-        '''
-        
-        tables = query_api.query(flux_query)
-        records = []
-        for table in tables:
-            for record in table.records:
-                engine_id_val = record.values.get("engine_id")
-                cycle_val = record.values.get("cycle")
-                records.append({
-                    "time": record.get_time().isoformat() if record.get_time() else datetime.utcnow().isoformat(),
-                    "engine_id": int(engine_id_val) if engine_id_val is not None else 0,
-                    "cycle": int(cycle_val) if cycle_val is not None else 0,
-                    "sensor": record.get_field(),
-                    "value": record.get_value()
-                })
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        if engine_id:
+            cursor.execute(
+                "SELECT engine_id, cycle, timestamp, payload FROM telemetry_buffer WHERE engine_id = ? ORDER BY id DESC LIMIT ?",
+                (engine_id, limit)
+            )
+        else:
+            cursor.execute(
+                "SELECT engine_id, cycle, timestamp, payload FROM telemetry_buffer ORDER BY id DESC LIMIT ?",
+                (limit,)
+            )
+        rows = cursor.fetchall()
+        conn.close()
+
+        for r_engine_id, r_cycle, r_time, r_payload_str in rows:
+            try:
+                p = json.loads(r_payload_str)
+                if "sensors" in p and isinstance(p["sensors"], list):
+                    for s_idx, s_val in enumerate(p["sensors"]):
+                        records.append({
+                            "time": r_time,
+                            "engine_id": r_engine_id,
+                            "cycle": r_cycle,
+                            "sensor": f"sensor_{s_idx+1}",
+                            "value": float(s_val)
+                        })
+                if "rul_prediction" in p:
+                    records.append({
+                        "time": r_time,
+                        "engine_id": r_engine_id,
+                        "cycle": r_cycle,
+                        "sensor": "rul_prediction",
+                        "value": float(p["rul_prediction"])
+                    })
+            except Exception:
+                continue
 
         return records
     except Exception as e:
-        # Fallback: return empty list or log error (offline resilience handled via subscriber local cache)
-        print(f"InfluxDB read error: {e}")
+        print(f"SQLite telemetry buffer read error: {e}")
         return []
 
 # H2. GET /alerts - current alerts in the sign-off queue
