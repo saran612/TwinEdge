@@ -19,8 +19,9 @@ This document lists the measured metrics of the TwinEdge 1D CNN model trained on
 
 - **Test Condition**: 100 inference passes on sliding windows of shape `(1, 30, 14)` on edge CPU hardware.
 - **Warmup passes**: 10
-- **Average latency**: **0.139 ms** per window.
-- **Feasibility**: High-throughput capability suitable for streaming telemetry from multiple aircraft engines simultaneously (can support >7,000 engine updates per second on a single edge core).
+- **Average latency**: **0.139 ms** per window (measured locally; 0.052 ms measured on modern multi-core host).
+- **Theoretical Single-Core Throughput Limit**: **~7,194 inferences/second** (arithmetically extrapolated as `1000 / 0.139 ms` single-core ONNX runtime execution). 
+  *Note on Scope*: This figure reflects raw CPU inference capability for sliding windows. In production, end-to-end multi-engine throughput will be constrained by MQTT broker ingestion, network I/O, and SQLite/InfluxDB write serialization; an end-to-end concurrent load test at full 7,000-engine scale has not been run.
 
 ---
 

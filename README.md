@@ -46,7 +46,7 @@ Aircraft downtime costs airlines up to $150,000 per hour, yet India outsources n
 
 ## Architecture & Data Flow
 
-For a detailed breakdown of the technical design, tradeoffs, and real vs. mocked scope, see the [architecture.md](file:///home/saran/project/TwinEdge/docs/architecture.md) documentation.
+For a detailed breakdown of the technical design, tradeoffs, and real vs. mocked scope, see the [architecture.md](docs/architecture.md) documentation.
 
 ```
    Sensor Data (NASA C-MAPSS FD001)
@@ -77,45 +77,45 @@ For a detailed breakdown of the technical design, tradeoffs, and real vs. mocked
 ## Setup & Execution Instructions
 
 ### Prerequisites
-- Docker & Docker Daemon running on host.
-- Python 3.10+ (for local scripts).
+* **Edge Serving Runtime**:
+  - **Node.js v22+** (required for Vite frontend build)
+  - **Python 3.11** (recommended via `uv` or system Python 3.10+)
+  - **Docker** (optional: for containerized Mosquitto & InfluxDB; the edge stack gracefully falls back to local SQLite buffer and HTTP bypass if offline)
+* **Model Retraining Scope**:
+  - The quantized frozen models (`backend/model/twinedge_rul.onnx` and `twinedge_rul.tflite`) are committed serving artifacts ready for immediate deployment.
+  - *Note on Retraining*: `backend/model/train.py` requires `tensorflow` and `tf2onnx`. Because TensorFlow binary wheels are not currently available for Python 3.14+, model retraining requires a separate Python 3.10 or 3.11 environment.
 
-### 1. Start Infrastructure Containers
-Run the helper script at the repo root to pull and launch Mosquitto (MQTT) and InfluxDB:
+### 1. Initialize Python Environment & Backend
+Using `uv` (fast standalone package manager):
 ```bash
-./run_infra.sh start
-```
-This launches the containers and starts the subscriber loop (`twinedge_subscriber`) which writes MQTT packets to InfluxDB.
+# Create Python 3.11 virtualenv
+uv venv backend/venv --python 3.11
+uv pip install -r backend/requirements.txt --python backend/venv/bin/python
 
-### 2. Set Up Python Virtual Environment (Optional, for scripts)
-To run local evaluation or tests, initialize the virtual environment:
-```bash
-python3 -m venv backend/venv
-backend/venv/bin/pip install -r backend/requirements.txt
-```
-
-### 3. Preprocess Dataset
-Run the preprocessing script to clean and normalize the NASA C-MAPSS dataset:
-```bash
-backend/venv/bin/python3 backend/model/preprocess.py
-```
-This generates standard scaled sliding windows of size 30 and saves them to `/backend/data/processed/`.
-
-### 4. Build and Run FastAPI Backend
-Build the backend container and run it (bound to the host network on port 8000):
-```bash
-docker build -t twinedge_backend ./backend
-docker run -d --name twinedge_backend --network host -v $(pwd)/backend:/app twinedge_backend
+# Launch FastAPI backend on port 8000
+PYTHONPATH=backend backend/venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-### 5. Launch React Dashboard Frontend
-Navigate to `/frontend` and start the Vite development server:
+### 2. Launch React Dashboard Frontend
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-Open `http://localhost:5173` (or the port Vite prints) in your browser, or open the live website at https://twin-edge.vercel.app/.
+Open `http://localhost:5173` in your browser.
+
+### 3. Launch Multi-Engine Telemetry Simulator
+To stream live turbofan sensor packets for Engines 1, 2, and 3 concurrently:
+```bash
+PYTHONPATH=backend backend/venv/bin/python backend/simulator.py
+```
+
+### 4. Optional: Start Infrastructure Containers (Mosquitto & InfluxDB)
+If Docker is installed:
+```bash
+./run_infra.sh start
+```
+If Docker is not installed, the platform automatically runs in Edge-Resilient mode (SQLite `telemetry_buffer` fallback).
 
 ---
 
@@ -203,5 +203,5 @@ TwinEdge/
 
 ## Model Performance & Evaluation
 
-For measured benchmarks, test set RMSE metrics, and CPU latency timings of the edge 1D CNN model, see the [results.md](file:///home/saran/project/TwinEdge/docs/results.md) documentation.
+For measured benchmarks, test set RMSE metrics, and CPU latency timings of the edge 1D CNN model, see the [results.md](docs/results.md) documentation.
 
