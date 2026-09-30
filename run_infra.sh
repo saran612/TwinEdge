@@ -4,15 +4,28 @@
 
 ACTION=$1
 
+if ! command -v docker &>/dev/null; then
+    echo "======================================================================"
+    echo "[ERROR] Docker is not installed or not in PATH."
+    echo "Containerized infrastructure (Mosquitto & InfluxDB) requires Docker."
+    echo ""
+    echo "For native edge mode without Docker:"
+    echo "  1. Start Mosquitto broker: mosquitto -c backend/config/mosquitto.conf"
+    echo "  2. Start Subscriber:      PYTHONPATH=backend backend/venv/bin/python backend/app/influx_writer.py"
+    echo "======================================================================"
+    exit 1
+fi
+
 if [ "$ACTION" == "start" ]; then
     echo "Starting infrastructure containers..."
     
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     # 1. Start Mosquitto
     docker rm -f twinedge_mosquitto 2>/dev/null || true
     docker run -d \
         --name twinedge_mosquitto \
         -p 1883:1883 \
-        -v /home/saran/project/TwinEdge/backend/config/mosquitto.conf:/mosquitto/config/mosquitto.conf \
+        -v "$SCRIPT_DIR/backend/config/mosquitto.conf:/mosquitto/config/mosquitto.conf" \
         eclipse-mosquitto:2.0.18
         
     # 2. Start InfluxDB
@@ -41,7 +54,7 @@ if [ "$ACTION" == "start" ]; then
         -e INFLUXDB_TOKEN=my-super-secret-admin-token-12345 \
         -e INFLUXDB_ORG=twinedge \
         -e INFLUXDB_BUCKET=telemetry \
-        -v /home/saran/project/TwinEdge/backend:/app \
+        -v "$SCRIPT_DIR/backend:/app" \
         twinedge_backend \
         python3 -u app/influx_writer.py
 

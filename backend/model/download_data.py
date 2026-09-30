@@ -10,7 +10,7 @@ def download_file(url, dest_path):
 def main():
     base_url = "https://raw.githubusercontent.com/mapr-demos/predictive-maintenance/master/notebooks/jupyter/Dataset/CMAPSSData/"
     files = ["train_FD001.txt", "test_FD001.txt", "RUL_FD001.txt"]
-    dest_dir = "/home/saran/project/TwinEdge/backend/data/raw"
+    dest_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "raw")
     
     for file_name in files:
         url = base_url + file_name

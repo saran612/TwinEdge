@@ -3,7 +3,8 @@ import requests
 import numpy as np
 
 def main():
-    processed_dir = "/home/saran/project/TwinEdge/backend/data/processed"
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    processed_dir = os.path.join(base_dir, "data", "processed")
     
     # Load test array
     x_test_path = os.path.join(processed_dir, "x_test.npy")
@@ -20,7 +21,7 @@ def main():
     # The array contains scaled values, but wait! The endpoint expects RAW sensor readings 
     # and standard scales them inside the server.
     # To test this correctly, let's read the raw text from test_FD001.txt for engine 1.
-    raw_file = "/home/saran/project/TwinEdge/backend/data/raw/test_FD001.txt"
+    raw_file = os.path.join(base_dir, "data", "raw", "test_FD001.txt")
     if not os.path.exists(raw_file):
         print("Raw test data not found!")
         return

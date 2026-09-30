@@ -50,8 +50,7 @@ def main():
         publish_msg(client, c)
         time.sleep(1)
 
-    # Check SQLite buffer database to verify local buffering
-    db_path = "/home/saran/project/TwinEdge/backend/app/db.sqlite3"
+    db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "app", "db.sqlite3")
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     cursor.execute("SELECT COUNT(*) FROM telemetry_buffer WHERE engine_id = 777")
