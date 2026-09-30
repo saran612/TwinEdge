@@ -18,8 +18,10 @@ import {
   X,
   AlertCircle,
   Sun,
-  Moon
+  Moon,
+  Box
 } from 'lucide-react';
+import Turbofan3DView from './components/Turbofan3DView';
 import { 
   LineChart, 
   Line, 
@@ -44,9 +46,11 @@ export default function App() {
   const [auditLog, setAuditLog] = useState([]);
   const [selectedAlert, setSelectedAlert] = useState(null);
   const [signoffNotes, setSignoffNotes] = useState('');
-  const [selectedEngineId, setSelectedEngineId] = useState(1);
+  const [selectedEngineId, setSelectedEngineId] = useState(3);
   const [isOfflineDemo, setIsOfflineDemo] = useState(false);
   const [latency, setLatency] = useState(null);
+  const [pipelineMode, setPipelineMode] = useState('mqtt_pipeline');
+  const [isStorageOnline, setIsStorageOnline] = useState(false);
   
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('theme') || 'light';
@@ -69,6 +73,8 @@ export default function App() {
       if (isOfflineDemo) {
         setConnectionState('offline_local');
         setLatency('—');
+        setIsStorageOnline(false);
+        setPipelineMode('http_bypass');
         
         // Load from local storage cache
         const cachedAlerts = localStorage.getItem('cached_alerts');
@@ -92,6 +98,9 @@ export default function App() {
         const healthData = await healthRes.json();
         failCountRef.current = 0;
         setModelLoaded(healthData.model_loaded);
+        setIsStorageOnline(Boolean(healthData.downstream_connected));
+        setPipelineMode(healthData.pipeline_mode || (healthData.pipeline_bypass ? 'http_bypass' : 'mqtt_pipeline'));
+
         if (healthData.metadata && healthData.metadata.mean_cpu_latency_ms) {
           setLatency(`${healthData.metadata.mean_cpu_latency_ms.toFixed(3)} ms`);
         } else {
@@ -224,28 +233,7 @@ export default function App() {
     };
   };
 
-  const currentTwin = getLatestTelemetryForEngine(selectedEngineId) || {
-    engine_id: selectedEngineId,
-    cycle: 180,
-    rul: 42.5,
-    sensors: {
-      "sensor_2": 642.3, // temp
-      "sensor_3": 1585.1,
-      "sensor_4": 1400.8,
-      "sensor_7": 554.2,
-      "sensor_8": 2388.0,
-      "sensor_9": 9046.2,
-      "sensor_11": 47.4,
-      "sensor_12": 521.8,
-      "sensor_13": 2388.0,
-      "sensor_14": 8138.5,
-      "sensor_15": 8.41,
-      "sensor_17": 392.0,
-      "sensor_20": 38.9,
-      "sensor_21": 23.3
-    },
-    time: new Date().toISOString()
-  };
+  const currentTwin = getLatestTelemetryForEngine(selectedEngineId);
 
   // Compute severity helper
   const getSeverity = (rul) => {
@@ -272,9 +260,9 @@ export default function App() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100 font-sans transition-colors duration-200">
+    <div className="flex flex-col h-screen overflow-hidden bg-slate-950 text-slate-100 font-sans transition-colors duration-200">
       {/* Top Navbar */}
-      <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur-md sticky top-0 z-50 px-6 py-4 flex items-center justify-between transition-colors">
+      <header className="shrink-0 border-b border-slate-800 bg-slate-900/60 backdrop-blur-md z-50 px-6 py-4 flex items-center justify-between transition-colors">
         <div className="flex items-center gap-3">
           <Layers className="h-8 w-8 text-indigo-500 animate-pulse" />
           <div>
@@ -306,12 +294,29 @@ export default function App() {
           <div className="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800 text-xs">
             <Database className="h-4 w-4 text-slate-400" />
             <span className="text-slate-400">Local Store:</span>
-            {isOfflineDemo ? (
+            {isOfflineDemo || !isStorageOnline || connectionState === 'offline_local' ? (
               <span className="text-amber-400 font-semibold flex items-center gap-1">
-                <ShieldAlert className="h-3.5 w-3.5" /> Buffering Offline
+                <ShieldAlert className="h-3.5 w-3.5" /> SQLite Buffer (Offline)
+              </span>
+            ) : connectionState === 'connected' ? (
+              <span className="text-emerald-400 font-semibold">InfluxDB Connected</span>
+            ) : (
+              <span className="text-rose-400 font-semibold">Storage Unreachable</span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800 text-xs">
+            <Activity className="h-4 w-4 text-slate-400" />
+            <span className="text-slate-400">Pipeline:</span>
+            {pipelineMode === 'mqtt_pipeline' ? (
+              <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                MQTT Live
               </span>
             ) : (
-              <span className="text-emerald-400 font-semibold">InfluxDB Connected</span>
+              <span className="text-amber-400 font-semibold flex items-center gap-1">
+                <AlertTriangle className="h-3.5 w-3.5" /> HTTP Bypass (MQTT Down)
+              </span>
             )}
           </div>
 
@@ -345,9 +350,9 @@ export default function App() {
       </header>
 
       {/* Main Workspace Layout */}
-      <div className="flex flex-1">
+      <div className="flex flex-1 overflow-hidden">
         {/* Left Sidebar Navigation */}
-        <nav className="w-64 border-r border-slate-800 bg-slate-900/20 p-4 flex flex-col gap-2 transition-colors">
+        <nav className="w-64 shrink-0 border-r border-slate-800 bg-slate-900/20 p-4 flex flex-col gap-2 overflow-hidden select-none transition-colors">
           <button 
             onClick={() => setActiveTab('queue')}
             className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
@@ -375,6 +380,21 @@ export default function App() {
           >
             <Cpu className="h-5 w-5" />
             Live Digital Twin
+          </button>
+
+          <button 
+            onClick={() => setActiveTab('3d-twin')}
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+              activeTab === '3d-twin' 
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/25' 
+                : 'text-slate-400 hover:bg-slate-900 hover:text-white'
+            }`}
+          >
+            <Box className="h-5 w-5" />
+            3D Turbofan Twin
+            <span className="ml-auto bg-indigo-500/20 text-indigo-300 text-[10px] px-1.5 py-0.5 rounded font-bold border border-indigo-500/30">
+              3D
+            </span>
           </button>
 
           <button 
@@ -489,58 +509,9 @@ export default function App() {
                     ))}
                   </div>
                 )}
-
-                {/* Audit Log Section */}
-                <div className="pt-6 border-t border-slate-900">
-                  <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                    <Clock className="h-5 w-5 text-slate-400" /> AME Action Audit Log (Resolved Alerts)
-                  </h3>
-                  {auditLog.length === 0 ? (
-                    <p className="text-xs text-slate-500 italic">No resolved sign-off actions logged in the audit history.</p>
-                  ) : (
-                    <div className="border border-slate-900 rounded-2xl overflow-hidden bg-slate-900/10">
-                      <table className="w-full text-left border-collapse text-xs">
-                        <thead>
-                          <tr className="border-b border-slate-800 bg-slate-900/40 text-slate-400 font-semibold uppercase tracking-wider">
-                            <th className="p-4">Engine</th>
-                            <th className="p-4">Cycle</th>
-                            <th className="p-4">RUL</th>
-                            <th className="p-4">Status</th>
-                            <th className="p-4">Notes</th>
-                            <th className="p-4">AME Sign-off Time</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-800">
-                          {auditLog.map(log => (
-                            <tr key={log.id} className="hover:bg-slate-900/20">
-                              <td className="p-4 font-bold text-white">#{log.engine_id}</td>
-                              <td className="p-4 font-mono">{log.cycle}</td>
-                              <td className="p-4 font-mono">{log.rul_prediction}</td>
-                              <td className="p-4">
-                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                  log.status === 'APPROVED' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                                  log.status === 'REJECTED' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' :
-                                  'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                                }`}>
-                                  {log.status === 'APPROVED' ? 'ACCEPTED' : log.status}
-                                </span>
-                              </td>
-                              <td className="p-4 text-slate-300 max-w-xs truncate" title={log.notes}>
-                                {log.notes || '-'}
-                              </td>
-                              <td className="p-4 text-slate-400 font-mono">
-                                {new Date(log.signoff_time).toLocaleTimeString()}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
               </div>
 
-              {/* Action and Notes Panel */}
+              {/* Action and Notes Panel + Audit Log */}
               <div className="space-y-6">
                 <div className="border border-slate-800 rounded-2xl p-6 bg-slate-900/30 backdrop-blur-md">
                   <h3 className="text-lg font-bold text-white mb-4">Inspection & Sign-Off Control</h3>
@@ -590,6 +561,60 @@ export default function App() {
                     <div className="text-center py-12 text-slate-500">
                       <ShieldAlert className="h-10 w-10 mx-auto mb-2 text-slate-600" />
                       <p className="text-xs">Select a pending alert from the queue to inspect and record AME maintenance sign-off.</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Audit Log Section - Right under Inspection & Sign-Off Control */}
+                <div className="border border-slate-800 rounded-2xl p-6 bg-slate-900/30 backdrop-blur-md">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-base font-bold text-white flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-slate-400" /> AME Action Audit Log (Resolved Alerts)
+                    </h3>
+                    <span className="bg-slate-800/80 text-slate-400 text-[10px] px-2 py-0.5 rounded-full font-mono">
+                      {auditLog.length} resolved
+                    </span>
+                  </div>
+                  {auditLog.length === 0 ? (
+                    <p className="text-xs text-slate-500 italic py-4 text-center">No resolved sign-off actions logged in the audit history.</p>
+                  ) : (
+                    <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-950/60 max-h-72 overflow-y-auto overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="border-b border-slate-800 bg-slate-900/60 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
+                            <th className="p-3">Engine</th>
+                            <th className="p-3">Cycle</th>
+                            <th className="p-3">RUL</th>
+                            <th className="p-3">Status</th>
+                            <th className="p-3">Notes</th>
+                            <th className="p-3">Time</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800/80">
+                          {auditLog.map(log => (
+                            <tr key={log.id} className="hover:bg-slate-900/40">
+                              <td className="p-3 font-bold text-white whitespace-nowrap">#{log.engine_id}</td>
+                              <td className="p-3 font-mono">{log.cycle}</td>
+                              <td className="p-3 font-mono">{log.rul_prediction}</td>
+                              <td className="p-3">
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap ${
+                                  log.status === 'APPROVED' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                                  log.status === 'REJECTED' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' :
+                                  'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                }`}>
+                                  {log.status === 'APPROVED' ? 'ACCEPTED' : log.status}
+                                </span>
+                              </td>
+                              <td className="p-3 text-slate-300 max-w-[140px] truncate" title={log.notes}>
+                                {log.notes || '-'}
+                              </td>
+                              <td className="p-3 text-slate-400 font-mono text-[10px] whitespace-nowrap">
+                                {new Date(log.signoff_time).toLocaleTimeString()}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   )}
                 </div>
@@ -658,102 +683,143 @@ export default function App() {
                 </div>
               </div>
 
-              {/* KPI Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div className="border border-slate-800 rounded-2xl p-5 bg-slate-900/20">
-                  <div className="text-xs text-slate-500 font-semibold uppercase">Operational Cycle</div>
-                  <div className="text-3xl font-bold text-white mt-2 font-mono">{currentTwin.cycle}</div>
-                  <div className="text-[10px] text-slate-400 mt-1">Total recorded flight cycles</div>
-                </div>
-                <div className="border border-slate-800 rounded-2xl p-5 bg-slate-900/20">
-                  <div className="text-xs text-slate-500 font-semibold uppercase flex justify-between items-center">
-                    <span>Current Health Score</span>
-                    {connectionState === 'offline_local' && (
-                      <span className="text-[9px] bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800 text-amber-400">Cached</span>
-                    )}
-                    {connectionState === 'backend_unreachable' && (
-                      <span className="text-[9px] bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800 text-rose-400">Frozen</span>
-                    )}
+              {currentTwin ? (
+                <>
+                  {/* KPI Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div className="border border-slate-800 rounded-2xl p-5 bg-slate-900/20">
+                      <div className="text-xs text-slate-500 font-semibold uppercase">Operational Cycle</div>
+                      <div className="text-3xl font-bold text-white mt-2 font-mono">{currentTwin.cycle}</div>
+                      <div className="text-[10px] text-slate-400 mt-1">Total recorded flight cycles</div>
+                    </div>
+                    <div className="border border-slate-800 rounded-2xl p-5 bg-slate-900/20">
+                      <div className="text-xs text-slate-500 font-semibold uppercase flex justify-between items-center">
+                        <span>Current Health Score</span>
+                        {connectionState === 'offline_local' && (
+                          <span className="text-[9px] bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800 text-amber-400">Cached</span>
+                        )}
+                        {connectionState === 'backend_unreachable' && (
+                          <span className="text-[9px] bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800 text-rose-400">Frozen</span>
+                        )}
+                      </div>
+                      <div className="text-3xl font-bold text-indigo-400 mt-2 font-mono">
+                        {currentTwin.rul !== undefined ? `${((currentTwin.rul / 125) * 100).toFixed(0)}%` : '—'}
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-1">Derived from latest RUL ({currentTwin.rul} cycles)</div>
+                    </div>
+                    <div className="border border-slate-800 rounded-2xl p-5 bg-slate-900/20">
+                      <div className="text-xs text-slate-500 font-semibold uppercase">Pending Sign-offs</div>
+                      <div className="text-3xl font-bold text-amber-500 mt-2 font-mono">{alerts.length}</div>
+                      <div className="text-[10px] text-slate-400 mt-1">Awaiting AME decision</div>
+                    </div>
+                    <div className="border border-slate-800 rounded-2xl p-5 bg-slate-900/20">
+                      <div className="text-xs text-slate-500 font-semibold uppercase">CNN Inference Latency</div>
+                      <div className="text-3xl font-bold text-emerald-400 mt-2 font-mono">{latency || '—'}</div>
+                      <div className="text-[10px] text-slate-400 mt-1">Real CPU execution time</div>
+                    </div>
                   </div>
-                  <div className="text-3xl font-bold text-indigo-400 mt-2 font-mono">
-                    {currentTwin && currentTwin.rul !== undefined ? `${((currentTwin.rul / 125) * 100).toFixed(0)}%` : '—'}
+
+                  {/* Turbine Visual Representation */}
+                  <div className="border border-slate-800 rounded-3xl p-8 bg-slate-900/10 relative overflow-hidden flex flex-col items-center">
+                    <div className="absolute top-4 left-4 bg-slate-950/80 px-3 py-1 rounded-lg border border-slate-800 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Engine Layout Hotspots
+                    </div>
+
+                    <div className="w-full max-w-3xl h-64 bg-slate-950/50 rounded-2xl border border-slate-900 relative my-6 flex items-center justify-center">
+                      <svg className="w-5/6 h-5/6 opacity-80" viewBox="0 0 800 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M50 40 L750 40 L700 160 L50 160 Z" stroke="#334155" strokeWidth="3" />
+                        <ellipse cx="120" cy="100" rx="30" ry="50" fill="#1e293b" stroke="#475569" strokeWidth="2" />
+                        <rect x="180" y="60" width="120" height="80" fill="#0f172a" stroke="#334155" />
+                        <line x1="220" y1="60" x2="220" y2="140" stroke="#334155" />
+                        <line x1="260" y1="60" x2="260" y2="140" stroke="#334155" />
+                        <polygon points="300,70 420,50 420,150 300,130" fill="#1e1b4b" stroke="#312e81" />
+                        <polygon points="420,60 580,75 580,125 420,140" fill="#0f172a" stroke="#334155" />
+                        <path d="M580 80 Q660 100 700 90 L700 110 Q660 100 580 120 Z" fill="#991b1b" fillOpacity="0.2" stroke="#ef4444" />
+                        
+                        <circle cx="160" cy="65" r="8" fill={currentTwin.rul < 60 ? "#ef4444" : "#10b981"} className="animate-ping" />
+                        <circle cx="160" cy="65" r="5" fill={currentTwin.rul < 60 ? "#ef4444" : "#10b981"} />
+                        
+                        <circle cx="500" cy="95" r="8" fill={currentTwin.rul < 60 ? "#ef4444" : "#10b981"} className="animate-ping" />
+                        <circle cx="500" cy="95" r="5" fill={currentTwin.rul < 60 ? "#ef4444" : "#10b981"} />
+                      </svg>
+                      
+                      <div className="absolute top-10 left-[20%] text-[10px] bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-slate-300">
+                        T24 (LPC Temp): <span className="font-bold text-white">{(currentTwin.sensors?.sensor_2 || 642.3).toFixed(1)} K</span>
+                      </div>
+                      <div className="absolute bottom-10 right-[35%] text-[10px] bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-slate-300">
+                        T50 (EGT): <span className="font-bold text-white">{(currentTwin.sensors?.sensor_11 || 47.4).toFixed(1)} C</span>
+                      </div>
+                    </div>
+
+                    <div className="w-full grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                      <div className="bg-slate-950 p-4 rounded-xl border border-slate-900 text-xs">
+                        <span className="text-slate-500">T2 (Total Temp at Fan Inlet)</span>
+                        <div className="text-sm font-bold text-white mt-1">518.67 K</div>
+                      </div>
+                      <div className="bg-slate-950 p-4 rounded-xl border border-slate-900 text-xs">
+                        <span className="text-slate-500">P30 (Total Press at HPC Outlet)</span>
+                        <div className="text-sm font-bold text-white mt-1">{(currentTwin.sensors?.sensor_8 || 2388.0).toFixed(1)} psia</div>
+                      </div>
+                      <div className="bg-slate-950 p-4 rounded-xl border border-slate-900 text-xs">
+                        <span className="text-slate-500">Nf (Physical Fan Speed)</span>
+                        <div className="text-sm font-bold text-white mt-1">{(currentTwin.sensors?.sensor_9 || 9046.2).toFixed(1)} rpm</div>
+                      </div>
+                      <div className="bg-slate-950 p-4 rounded-xl border border-slate-900 text-xs">
+                        <span className="text-slate-500">BPR (Bypass Ratio)</span>
+                        <div className="text-sm font-bold text-white mt-1">{(currentTwin.sensors?.sensor_15 || 8.41).toFixed(2)}</div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-[10px] text-slate-400 mt-1">Derived from latest RUL</div>
+                </>
+              ) : (
+                <div className="border-2 border-dashed border-slate-800 rounded-3xl p-16 bg-slate-900/10 flex flex-col items-center justify-center text-center">
+                  <div className="h-16 w-16 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mb-4 text-amber-400">
+                    <AlertCircle className="h-8 w-8" />
+                  </div>
+                  <h3 className="text-xl font-bold text-white tracking-tight">NO LIVE TELEMETRY STREAM DETECTED</h3>
+                  <p className="text-sm text-slate-400 max-w-lg mt-2 leading-relaxed">
+                    No active sensor packets received for <span className="font-semibold text-white">Engine Unit #{selectedEngineId}</span>.
+                    Start the telemetry simulator (`python backend/simulator.py`) or switch to an actively streaming engine unit to populate the digital twin.
+                  </p>
+                  <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                    <span className="text-xs text-slate-500 font-mono bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800">
+                      Target Engine: #{selectedEngineId}
+                    </span>
+                    <span className="text-xs text-slate-500 font-mono bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800">
+                      Topic: twinedge/telemetry
+                    </span>
+                    <span className="text-xs text-amber-500/80 font-mono bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/20">
+                      Status: Waiting for Packets
+                    </span>
+                  </div>
                 </div>
-                <div className="border border-slate-800 rounded-2xl p-5 bg-slate-900/20">
-                  <div className="text-xs text-slate-500 font-semibold uppercase">Pending Sign-offs</div>
-                  <div className="text-3xl font-bold text-amber-500 mt-2 font-mono">{alerts.length}</div>
-                  <div className="text-[10px] text-slate-400 mt-1">Awaiting AME decision</div>
-                </div>
-                <div className="border border-slate-800 rounded-2xl p-5 bg-slate-900/20">
-                  <div className="text-xs text-slate-500 font-semibold uppercase">CNN Inference Latency</div>
-                  <div className="text-3xl font-bold text-emerald-400 mt-2 font-mono">{latency || '—'}</div>
-                  <div className="text-[10px] text-slate-400 mt-1">Real CPU execution time</div>
+              )}
+            </div>
+          )}
+
+          {/* TAB: 3D TURBOFAN DIGITAL TWIN */}
+          {activeTab === '3d-twin' && (
+            <div className="h-full w-full flex flex-col space-y-4">
+              <div className="flex items-center justify-between shrink-0">
+                <div>
+                  <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
+                    3D Turbofan Digital Twin
+                    <span className="bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2.5 py-0.5 rounded-lg text-xs font-bold font-mono">
+                      Three.js / WebGL PBR
+                    </span>
+                  </h2>
+                  <p className="text-sm text-slate-400">
+                    High-fidelity animated 3D mesh with real-time NASA C-MAPSS sensor hotspot mapping.
+                  </p>
                 </div>
               </div>
 
-              {/* Turbine Visual Representation */}
-              <div className="border border-slate-800 rounded-3xl p-8 bg-slate-900/10 relative overflow-hidden flex flex-col items-center">
-                <div className="absolute top-4 left-4 bg-slate-950/80 px-3 py-1 rounded-lg border border-slate-800 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  Engine Layout Hotspots
-                </div>
-
-                {/* Simulated Engine Layout Graphic */}
-                <div className="w-full max-w-3xl h-64 bg-slate-950/50 rounded-2xl border border-slate-900 relative my-6 flex items-center justify-center">
-                  {/* Turbofan Schematic (Vector Mockup) */}
-                  <svg className="w-5/6 h-5/6 opacity-80" viewBox="0 0 800 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    {/* Outer Casing */}
-                    <path d="M50 40 L750 40 L700 160 L50 160 Z" stroke="#334155" strokeWidth="3" />
-                    {/* Fan Blades Front */}
-                    <ellipse cx="120" cy="100" rx="30" ry="50" fill="#1e293b" stroke="#475569" strokeWidth="2" />
-                    {/* Compressors Stage */}
-                    <rect x="180" y="60" width="120" height="80" fill="#0f172a" stroke="#334155" />
-                    <line x1="220" y1="60" x2="220" y2="140" stroke="#334155" />
-                    <line x1="260" y1="60" x2="260" y2="140" stroke="#334155" />
-                    {/* Combustor Stage */}
-                    <polygon points="300,70 420,50 420,150 300,130" fill="#1e1b4b" stroke="#312e81" />
-                    {/* Turbine Exhaust */}
-                    <polygon points="420,60 580,75 580,125 420,140" fill="#0f172a" stroke="#334155" />
-                    {/* Hot Exhaust Nozzle */}
-                    <path d="M580 80 Q660 100 700 90 L700 110 Q660 100 580 120 Z" fill="#991b1b" fillOpacity="0.2" stroke="#ef4444" />
-                    
-                    {/* Hotspots (Interactive sensors) */}
-                    {/* T24 - Compressor Inlet Temperature */}
-                    <circle cx="160" cy="65" r="8" fill={currentTwin.rul < 60 ? "#ef4444" : "#10b981"} className="animate-ping" />
-                    <circle cx="160" cy="65" r="5" fill={currentTwin.rul < 60 ? "#ef4444" : "#10b981"} />
-                    
-                    {/* T50 - Turbine Exhaust Temp */}
-                    <circle cx="500" cy="95" r="8" fill={currentTwin.rul < 60 ? "#ef4444" : "#10b981"} className="animate-ping" />
-                    <circle cx="500" cy="95" r="5" fill={currentTwin.rul < 60 ? "#ef4444" : "#10b981"} />
-                  </svg>
-                  
-                  {/* Hotspots labels */}
-                  <div className="absolute top-10 left-[20%] text-[10px] bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-slate-300">
-                    T24 (LPC Temp): <span className="font-bold text-white">{(currentTwin.sensors.sensor_2 || 642.3).toFixed(1)} K</span>
-                  </div>
-                  <div className="absolute bottom-10 right-[35%] text-[10px] bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-slate-300">
-                    T50 (EGT): <span className="font-bold text-white">{(currentTwin.sensors.sensor_11 || 47.4).toFixed(1)} C</span>
-                  </div>
-                </div>
-
-                <div className="w-full grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-900 text-xs">
-                    <span className="text-slate-500">T2 (Total Temp at Fan Inlet)</span>
-                    <div className="text-sm font-bold text-white mt-1">518.67 K</div>
-                  </div>
-                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-900 text-xs">
-                    <span className="text-slate-500">P30 (Total Press at HPC Outlet)</span>
-                    <div className="text-sm font-bold text-white mt-1">{(currentTwin.sensors.sensor_8 || 2388.0).toFixed(1)} psia</div>
-                  </div>
-                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-900 text-xs">
-                    <span className="text-slate-500">Nf (Physical Fan Speed)</span>
-                    <div className="text-sm font-bold text-white mt-1">{(currentTwin.sensors.sensor_9 || 9046.2).toFixed(1)} rpm</div>
-                  </div>
-                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-900 text-xs">
-                    <span className="text-slate-500">BPR (Bypass Ratio)</span>
-                    <div className="text-sm font-bold text-white mt-1">{(currentTwin.sensors.sensor_15 || 8.41).toFixed(2)}</div>
-                  </div>
-                </div>
+              <div className="flex-1 w-full min-h-[550px] h-[calc(100vh-190px)]">
+                <Turbofan3DView 
+                  telemetry={telemetry}
+                  selectedEngineId={selectedEngineId}
+                  onSelectEngine={setSelectedEngineId}
+                />
               </div>
             </div>
           )}
