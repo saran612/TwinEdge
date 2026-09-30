@@ -130,13 +130,19 @@ def run_trajectory(args, metadata, scaler, train_df):
               f"{'YES' if anomaly else 'no':>8} {latency_ms:>12.3f}")
 
         telemetry_payload = {
-            "unit": args.unit, "cycle": cycle_num,
-            "rul_prediction": pred_rul, "anomaly_flag": anomaly,
-            "timestamp": time.time(),
+            "engine_id": int(args.unit),
+            "unit": int(args.unit),
+            "cycle": int(cycle_num),
+            "rul_prediction": float(pred_rul),
+            "anomaly_flag": int(anomaly),
+            "sensors": w[-1].tolist(),
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         }
         try_publish_mqtt(mqtt_client, args.telemetry_topic, telemetry_payload)
         if anomaly:
-            try_publish_mqtt(mqtt_client, args.alert_topic, telemetry_payload)
+            alert_payload = dict(telemetry_payload)
+            alert_payload["description"] = f"Engine #{args.unit} cycle {cycle_num} RUL dropped to {pred_rul:.1f}"
+            try_publish_mqtt(mqtt_client, args.alert_topic, alert_payload)
 
         time.sleep(args.delay)
 
@@ -213,18 +219,22 @@ def run_list(train_df):
 
 
 def main():
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    default_raw = os.path.join(base_dir, "data", "raw")
+    default_processed = os.path.join(base_dir, "data", "processed")
+
     parser = argparse.ArgumentParser(description="TwinEdge MRO — real C-MAPSS data simulator")
     parser.add_argument("--mode", choices=["trajectory", "snapshot", "list"], default="snapshot")
     parser.add_argument("--unit", type=int, default=24, help="Engine unit id for trajectory mode")
     parser.add_argument("--delay", type=float, default=0.5, help="Seconds between cycles (trajectory mode)")
     parser.add_argument("--api-url", default="http://localhost:8000")
-    parser.add_argument("--raw-data-dir", default="data/raw")
-    parser.add_argument("--processed-data-dir", default="data/processed")
+    parser.add_argument("--raw-data-dir", default=default_raw)
+    parser.add_argument("--processed-data-dir", default=default_processed)
     parser.add_argument("--publish-mqtt", action="store_true")
     parser.add_argument("--mqtt-host", default="localhost")
     parser.add_argument("--mqtt-port", type=int, default=1883)
-    parser.add_argument("--telemetry-topic", default="aerosentinel/telemetry")
-    parser.add_argument("--alert-topic", default="aerosentinel/alerts")
+    parser.add_argument("--telemetry-topic", default="twinedge/telemetry")
+    parser.add_argument("--alert-topic", default="twinedge/alerts")
     args = parser.parse_args()
 
     train_df = load_raw_train(args.raw_data_dir)

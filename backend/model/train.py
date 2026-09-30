@@ -16,7 +16,7 @@ def build_model(window_size, n_features):
     x = layers.Dropout(0.2)(x)
     outputs = layers.Dense(1, activation="linear", name="rul")(x)
 
-    model = models.Model(inputs, outputs, name="aerosentinel_rul_cnn")
+    model = models.Model(inputs, outputs, name="twinedge_rul_cnn")
     model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3), loss="mse", metrics=["mae"])
     return model
 
