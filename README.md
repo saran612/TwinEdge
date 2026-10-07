@@ -1,4 +1,4 @@
-# TwinEdge: Edge-Native Digital Twin & AME Queue for Aircraft MRO
+# TwinEdge: Edge AI for Digital Twin of Aircraft MRO
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-brightgreen?style=for-the-badge&logo=vercel)](https://twin-edge.vercel.app/)
 
