@@ -68,23 +68,28 @@ def simulate_engine(engine_id: int, engine_df: pd.DataFrame, feature_cols: list,
             "mqtt_active": is_mqtt_alive
         }
 
-        rul_prediction = 125.0
+        rul_prediction = None
         anomaly_flag = 0
-        confidence = 0.8
+        error_state = False
 
         try:
             res = requests.post(f"{BACKEND_URL}/predict", json=payload, timeout=2)
             if res.ok:
                 data = res.json()
-                rul_prediction = data["rul_prediction"]
-                anomaly_flag = data["anomaly_flag"]
-                confidence = data["confidence"]
+                rul_prediction = data.get("rul_prediction")
+                anomaly_flag = data.get("anomaly_flag", 0)
             else:
-                print(f"[Engine #{engine_id} Cycle {current_cycle:3d}] Backend returned status {res.status_code}")
-        except Exception:
-            rul_prediction = max(0.0, 125.0 - (current_cycle - 30) * 1.5)
-            anomaly_flag = int(rul_prediction < 60)
-            confidence = 0.5
+                error_state = True
+                print(f"[Engine #{engine_id} Cycle {current_cycle:3d}] Backend error: status {res.status_code} - {res.text}")
+        except Exception as e:
+            error_state = True
+            print(f"[Engine #{engine_id} Cycle {current_cycle:3d}] Backend connection failure: {e}")
+
+        if error_state or rul_prediction is None:
+            # Explicit error state: do not generate fake synthetic values
+            print(f"[Engine #{engine_id} | Cycle {current_cycle:3d}] ERROR: Backend unavailable — no prediction generated")
+            time.sleep(0.5)
+            continue
 
         # 2. Publish via MQTT if available
         published_mqtt = False
