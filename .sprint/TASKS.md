@@ -8,7 +8,7 @@
 | F3 | Replay controller + data-source switch (Live / Replay / Simulation) + held-out/test engine handling and badges | P0 | VERIFIED | Source switch behaves correctly, engine split badges display | .sprint/evidence/F3.txt |
 | F4 | Digital Twin page: 3D load, mapping, selection, panels, EOL data, counterfactual impact, color modes | P0 | VERIFIED | 3D canvas renders, components select, counterfactual impact computed | .sprint/evidence/F4.txt |
 | F5 | Simulation Lab: matrix editor, presets, run, results, sensitivity heatmap, OOD flags, save/compare/export | P0 | VERIFIED | Browser-side ORT-web runs offline without backend, matrix modifies inputs, heatmap renders | .sprint/evidence/F5.txt |
-| F6 | Alerts & Sign-off page: filters, detail drawer, K-gate evidence, reviewer ID, Approve/Reject contract, prototype disclaimer | P1 | TODO | Live signoff contract verified, disabled in Replay/Simulation | .sprint/evidence/F6.txt |
+| F6 | Alerts & Sign-off page: filters, detail drawer, K-gate evidence, reviewer ID, Approve/Reject contract, prototype disclaimer | P1 | VERIFIED | Live signoff contract verified, disabled in Replay/Simulation | .sprint/evidence/F6.txt |
 | F7 | Audit page: immutable chain table, verify chain endpoint, row/prev hash inspection, CSV/JSON export | P1 | TODO | Chain verified via API, hash copies work | .sprint/evidence/F7.txt |
 | F8 | Edge & Model page: model info, live/browser latency, edge bytes ratio, browser benchmark | P1 | TODO | Real measurements display, benchmark runs 100 iterations | .sprint/evidence/F8.txt |
 | F9 | Overview page: fleet engine table, status bands, mini charts, navigation quick actions | P1 | TODO | Fleet table loads, row click switches engine, health gauges update | .sprint/evidence/F9.txt |
