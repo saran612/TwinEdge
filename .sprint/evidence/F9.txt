@@ -1,0 +1,16 @@
+=== F9 OVERVIEW DASHBOARD EVIDENCE ===
+
+1. Vitest Suite Execution:
+
+ RUN  v5.0.3 /home/saran/projects/twinedge/frontend
+
+ ✓ src/test/F9.test.jsx (2 tests) 1017ms
+   ✓ F9 Overview Page (2)
+     ✓ renders flight-deck instrument metrics and fleet engine table 665ms
+     ✓ selects new active engine when row is clicked 336ms
+
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+   Start at  19:18:03
+   Duration  6.98s (environment 40%, import 24%, tests 16%, transform 15%, setup 5%)
+
