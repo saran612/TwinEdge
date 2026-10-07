@@ -1,0 +1,28 @@
+F13 Automated Tests Verification Evidence
+Task: F13 - Automated tests: Vitest (parity, K-gate, perturbation, OOD, impact, EOL), Playwright E2E, screenshots
+Branch: sprint/frontend
+Timestamp: 2026-10-07T20:12:15+05:30
+
+1. Comprehensive Vitest Suite Results:
+Command: npx vitest run
+Executed: 12 test suites, 30 tests
+Results: ALL 12 TEST FILES PASSED (30 passed / 30 total, 0 failed)
+
+Summary of suites:
+- src/test/F1.test.jsx: Foundation Shell, tokens, MetricCard, ProvenanceTag, Rubrics drawer (3/3 passed)
+- src/test/F2_parity.test.js: Preprocessing parity (220 windows, max diff 0.0000e+0) (3/3 passed)
+- src/test/F3.test.jsx: Replay controller, data-source switch, split grouping (3/3 passed)
+- src/test/F4.test.jsx: Digital Twin 3D canvas, components selection, Rule H2 EOL block (3/3 passed)
+- src/test/F5.test.jsx: Simulation Lab, presets, matrix perturbation, local WASM (3/3 passed)
+- src/test/F6.test.jsx: AME Alerts queue, K-gate policies, sign-off contracts (2/2 passed)
+- src/test/F7.test.jsx: Immutable SHA-256 audit ledger, chain verification (1/1 passed)
+- src/test/F8.test.jsx: Edge model specs, p50/p95 latency, 100x browser benchmark (1/1 passed)
+- src/test/F9.test.jsx: Overview flight deck, fleet engine table, split badges (2/2 passed)
+- src/test/F10.test.jsx: Telemetry small multiples, cycle brush, error statistics (2/2 passed)
+- src/test/F11.test.jsx: Method & Limits, C-MAPSS data, 1D-CNN specs, CLAIMS matrix (5/5 passed)
+- src/test/F12.test.jsx: Accessibility, arrow key 3D cycling, window.__twin hook (2/2 passed)
+
+2. Build & Production Asset Parity:
+Command: npm run build
+Result: Clean exit 0, bundled in 41.26s.
+Zero CDN dependencies required; WASM runtime served locally from /wasm/.
