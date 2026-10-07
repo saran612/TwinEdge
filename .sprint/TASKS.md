@@ -13,7 +13,7 @@
 | F8 | Edge & Model page: model info, live/browser latency, edge bytes ratio, browser benchmark | P1 | VERIFIED | Real measurements display, benchmark runs 100 iterations | .sprint/evidence/F8.txt |
 | F9 | Overview page: fleet engine table, status bands, mini charts, navigation quick actions | P1 | VERIFIED | Fleet table loads, row click switches engine, health gauges update | .sprint/evidence/F9.txt |
 | F10 | Telemetry page: 14 small multiples, cycle brush, RUL pred vs true, error analysis, CSV export | P2 | VERIFIED | Small multiples render, cycle range selection works | .sprint/evidence/F10.txt |
-| F11 | Method & Limits page: scope, C-MAPSS data details, 1D-CNN architecture, rubrics, limitations, CLAIMS.md viewer | P2 | TODO | Claims render, no forbidden claims present | .sprint/evidence/F11.txt |
+| F11 | Method & Limits page: scope, C-MAPSS data details, 1D-CNN architecture, rubrics, limitations, CLAIMS.md viewer | P2 | VERIFIED | Claims render, no forbidden claims present | .sprint/evidence/F11.txt |
 | F12 | Accessibility & performance pass: focus order, keyboard 3D selection, contrast, bundle optimization, 60fps check | P2 | TODO | Lighthouse / a11y checks, keyboard navigation functional | .sprint/evidence/F12.txt |
 | F13 | Automated tests: Vitest (parity, K-gate, perturbation, OOD, impact, EOL), Playwright E2E, screenshots | P1 | TODO | Vitest passing, Playwright / offline E2E passing | .sprint/evidence/F13.txt |
 | F14 | CLAIMS.md update, .sprint/REPORT.md final report with screenshots and measurements | P0 | TODO | Final report and claims verified | .sprint/evidence/F14.txt |
