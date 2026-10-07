@@ -140,13 +140,33 @@ def predict(data: WindowInput):
         last_simulator_mqtt_status = data.mqtt_active
 
     try:
-        # Check window shape: must be (30, 14)
         window_arr = np.array(data.window, dtype=np.float32)
-        if window_arr.shape != (30, 14):
+        # Check dimensionality
+        if window_arr.ndim != 2:
             raise HTTPException(
-                status_code=400, 
-                detail=f"Expected window shape (30, 14), got {window_arr.shape}"
+                status_code=400,
+                detail=f"Expected 2D window (N, 14), got shape {window_arr.shape}"
             )
+        
+        num_rows, num_features = window_arr.shape
+        if num_features != 14:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Expected 14 sensor features per cycle, got {num_features}"
+            )
+            
+        if num_rows == 0 or num_rows > 30:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Expected window length between 1 and 30, got {num_rows}"
+            )
+            
+        # Early-cycle front-padding matching preprocess.py:
+        # pad_len = window - len(values)
+        # values = np.vstack([np.repeat(values[0:1], pad_len, axis=0), values])
+        if num_rows < 30:
+            pad_len = 30 - num_rows
+            window_arr = np.vstack([np.repeat(window_arr[0:1], pad_len, axis=0), window_arr])
             
         # 1. Standard scale the window features using the fitted scaler
         # The scaler was fitted on 2D data, so we scale the 30 cycles

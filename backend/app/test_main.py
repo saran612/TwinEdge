@@ -13,16 +13,27 @@ def test_health():
         assert response.json()["status"] == "ok"
 
 def test_predict_validation():
-    # Test invalid window shape
-    payload = {
-        "engine_id": 1,
-        "cycle": 1,
-        "window": [[1.0] * 14] * 20 # Only 20 cycles instead of 30
-    }
+    # Test valid padded lengths (1, 10, 29, 30)
     with TestClient(app) as client:
-        response = client.post("/predict", json=payload)
-        assert response.status_code == 400
-        assert "Expected window shape (30, 14)" in response.json()["detail"]
+        row = [1.0] * 14
+        for length in [1, 10, 29, 30]:
+            payload = {
+                "engine_id": 1,
+                "cycle": length,
+                "window": [row] * length
+            }
+            response = client.post("/predict", json=payload)
+            assert response.status_code == 200, f"Expected 200 for length {length}, got {response.status_code}"
+            data = response.json()
+            assert "rul_prediction" in data
+
+        # Length 31 should return 400
+        response_31 = client.post("/predict", json={"engine_id": 1, "cycle": 31, "window": [row] * 31})
+        assert response_31.status_code == 400
+
+        # Bad feature dimension should return 400
+        response_bad = client.post("/predict", json={"engine_id": 1, "cycle": 1, "window": [[1.0] * 13]})
+        assert response_bad.status_code == 400
 
 def test_alerts_signoff():
     # Insert mock alert directly to database
