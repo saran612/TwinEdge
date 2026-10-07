@@ -59,6 +59,24 @@ export default function EngineViewport3D({
     camera.position.set(4, 2.5, 4);
     cameraRef.current = camera;
 
+    // Keyboard navigation (Arrow keys cycle components, Escape clears)
+    const handleKeyDown = (e) => {
+      const comps = componentMapData.components;
+      if (!comps || comps.length === 0) return;
+      if (e.key === 'Escape') {
+        onSelectComponent && onSelectComponent(null);
+      } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        const curIdx = comps.findIndex((c) => c.id === selectedComponentId);
+        const nextIdx = curIdx === -1 ? 0 : (curIdx + 1) % comps.length;
+        onSelectComponent && onSelectComponent(comps[nextIdx].id);
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        const curIdx = comps.findIndex((c) => c.id === selectedComponentId);
+        const prevIdx = curIdx === -1 ? comps.length - 1 : (curIdx - 1 + comps.length) % comps.length;
+        onSelectComponent && onSelectComponent(comps[prevIdx].id);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
     // 2. Renderer setup capped at DPR 2 with headless fallback
     let renderer;
     try {
@@ -85,7 +103,9 @@ export default function EngineViewport3D({
       mountRef.current.innerHTML = '';
       mountRef.current.appendChild(dummyCanvas);
       setIsLoaded(true);
-      return;
+      return () => {
+        window.removeEventListener('keydown', handleKeyDown);
+      };
     }
 
     // 3. Controls
@@ -247,8 +267,10 @@ export default function EngineViewport3D({
     };
     window.addEventListener('resize', handleResize);
 
+
     return () => {
       window.removeEventListener('resize', handleResize);
+      window.removeEventListener('keydown', handleKeyDown);
       if (renderer.domElement) {
         renderer.domElement.removeEventListener('pointerdown', handlePointerDown);
       }
@@ -256,7 +278,7 @@ export default function EngineViewport3D({
       controls.dispose();
       renderer.dispose();
     };
-  }, []);
+  }, [selectedComponentId, onSelectComponent]);
 
   // Update component highlighting and color modes
   useEffect(() => {

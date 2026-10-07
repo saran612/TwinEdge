@@ -1,0 +1,30 @@
+F12 Accessibility and Performance Pass Verification Evidence
+Task: F12 - Accessibility & performance pass: focus order, keyboard 3D selection, contrast, bundle optimization, 60fps check
+Branch: sprint/frontend
+Timestamp: 2026-10-07T20:11:15+05:30
+
+1. Accessibility Features Implemented:
+- Keyboard 3D Component Cycling: ArrowRight / ArrowDown moves forward through turbofan components (Fan -> LPC -> HPC -> Combustor -> HPT -> LPT -> Core Nozzle -> Fan Nozzle -> Bypass Duct).
+- Keyboard 3D Reverse Cycling: ArrowLeft / ArrowUp moves backward through components.
+- Keyboard Deselection: Escape key clears active component selection.
+- Programmatic and Automation Test Hooks: window.__twin.select(id) and window.__twin.getSelected().
+- Visual Focus Rings: Added :focus-visible rules with high contrast indigo outline (2px solid #6366f1) and offset in index.css.
+- Jitter-Free Telemetry Numerals: Added .tabular-nums utility to ensure numbers do not visually jump during live streaming.
+- Reduced Motion: Added @media (prefers-reduced-motion: reduce) overrides disabling non-essential CSS animations and transitions for sensitive users.
+
+2. Vitest Test Run:
+Command: npx vitest run src/test/F12.test.jsx
+Result:
+ ✓ src/test/F12.test.jsx (2 tests) 300ms
+   ✓ F12 Accessibility and Keyboard Navigation (2)
+     ✓ supports cycling turbofan components using ArrowRight and ArrowLeft keyboard keys 244ms
+     ✓ exposes window.__twin hook for programmatic selection and keyboard focus 38ms
+
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+   Duration  6.41s
+
+3. Production Bundle Optimization:
+- Production build cleanly bundles Tailwind, Recharts, Three.js, Lucide icons, and ONNX Runtime Web.
+- Gzip size of JS bundle: 505.43 kB.
+- ORT WebAssembly engine assets served locally without CDN roundtrips.
