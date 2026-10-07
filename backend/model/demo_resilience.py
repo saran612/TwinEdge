@@ -69,8 +69,11 @@ def main():
 
     # 5. Verify InfluxDB contains all 6 messages
     print("\n--- PHASE 4: Verification ---")
-    influx_url = "http://localhost:8086"
-    influx_token = "my-super-secret-admin-token-12345"
+    influx_url = os.getenv("INFLUXDB_URL", "http://localhost:8086")
+    influx_token = os.getenv("INFLUXDB_TOKEN")
+    if not influx_token:
+        print("INFLUXDB_TOKEN not set; skipping Influx query verification")
+        return
     
     try:
         influx = InfluxDBClient(url=influx_url, token=influx_token, org="twinedge")

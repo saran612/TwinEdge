@@ -3,7 +3,7 @@
 | id | task | status | verification | evidence file |
 |---|---|---|---|---|
 | T1 | Non-destructive init: remove DELETE FROM alerts/telemetry_buffer, idempotent setup | VERIFIED | insert a row, call init_db() again, row persists; grep shows no such DELETE in app code | .sprint/evidence/T1.txt |
-| T2 | Secrets out of source: Influx/MQTT tokens/passwords to .env, add .env.example, fail-fast | TODO | git grep old token returns nothing in tracked files; docker compose config resolves | .sprint/evidence/T2.txt |
+| T2 | Secrets out of source: Influx/MQTT tokens/passwords to .env, add .env.example, fail-fast | VERIFIED | git grep old token returns nothing in tracked files; docker compose config resolves | .sprint/evidence/T2.txt |
 | T3 | Early-cycle padding in POST /predict: pad windows < 30 matching preprocess.py; >30 or bad shape -> 400 | TODO | tests for lengths 1, 10, 29, 30, 31; numeric parity vs preprocess.py = 0.0 diff | .sprint/evidence/T3.txt |
 | T4 | Immutable audit trail: audit_trail table with hash chaining, insert-only | TODO | tests for chain verification true on clean, false on tampered; grep shows no UPDATE/DELETE on audit_trail | .sprint/evidence/T4.txt |
 | T5 | Sign-off contract: POST /alerts/{id}/signoff requires decision & non-empty reviewer_id | TODO | tests for missing reviewer_id, bad decision, double sign-off, valid sign-off | .sprint/evidence/T5.txt |

@@ -17,11 +17,11 @@ services:
       - "8086:8086"
     environment:
       - DOCKER_INFLUXDB_INIT_MODE=setup
-      - DOCKER_INFLUXDB_INIT_USERNAME=admin
-      - DOCKER_INFLUXDB_INIT_PASSWORD=adminpassword
-      - DOCKER_INFLUXDB_INIT_ORG=twinedge
-      - DOCKER_INFLUXDB_INIT_BUCKET=telemetry
-      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=my-super-secret-admin-token-12345
+      - DOCKER_INFLUXDB_INIT_USERNAME=${DOCKER_INFLUXDB_INIT_USERNAME:-admin}
+      - DOCKER_INFLUXDB_INIT_PASSWORD=${DOCKER_INFLUXDB_INIT_PASSWORD}
+      - DOCKER_INFLUXDB_INIT_ORG=${INFLUXDB_ORG:-twinedge}
+      - DOCKER_INFLUXDB_INIT_BUCKET=${INFLUXDB_BUCKET:-telemetry}
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUXDB_TOKEN}
     volumes:
       - influxdb_data:/var/lib/influxdb2
     restart: unless-stopped
@@ -37,12 +37,12 @@ services:
       - mosquitto
       - influxdb
     environment:
-      - MQTT_HOST=mosquitto
-      - MQTT_PORT=1883
-      - INFLUXDB_URL=http://influxdb:8086
-      - INFLUXDB_TOKEN=my-super-secret-admin-token-12345
-      - INFLUXDB_ORG=twinedge
-      - INFLUXDB_BUCKET=telemetry
+      - MQTT_HOST=${MQTT_HOST:-mosquitto}
+      - MQTT_PORT=${MQTT_PORT:-1883}
+      - INFLUXDB_URL=${INFLUXDB_URL:-http://influxdb:8086}
+      - INFLUXDB_TOKEN=${INFLUXDB_TOKEN}
+      - INFLUXDB_ORG=${INFLUXDB_ORG:-twinedge}
+      - INFLUXDB_BUCKET=${INFLUXDB_BUCKET:-telemetry}
     volumes:
       - ./backend:/app
     restart: unless-stopped
@@ -56,12 +56,12 @@ services:
       - mosquitto
       - influxdb
     environment:
-      - MQTT_HOST=mosquitto
-      - MQTT_PORT=1883
-      - INFLUXDB_URL=http://influxdb:8086
-      - INFLUXDB_TOKEN=my-super-secret-admin-token-12345
-      - INFLUXDB_ORG=twinedge
-      - INFLUXDB_BUCKET=telemetry
+      - MQTT_HOST=${MQTT_HOST:-mosquitto}
+      - MQTT_PORT=${MQTT_PORT:-1883}
+      - INFLUXDB_URL=${INFLUXDB_URL:-http://influxdb:8086}
+      - INFLUXDB_TOKEN=${INFLUXDB_TOKEN}
+      - INFLUXDB_ORG=${INFLUXDB_ORG:-twinedge}
+      - INFLUXDB_BUCKET=${INFLUXDB_BUCKET:-telemetry}
     volumes:
       - ./backend:/app
     command: ["python3", "app/influx_writer.py"]

@@ -1,0 +1,12 @@
+=== CHECK 1: git grep for old token in tracked files ===
+Old token NOT FOUND in tracked files (CLEAN)
+
+=== CHECK 2: docker-compose environment variables check with .env.example ===
+Loaded .env.example keys: ['MQTT_HOST', 'MQTT_PORT', 'INFLUXDB_URL', 'INFLUXDB_TOKEN', 'INFLUXDB_ORG', 'INFLUXDB_BUCKET', 'DOCKER_INFLUXDB_INIT_USERNAME', 'DOCKER_INFLUXDB_INIT_PASSWORD', 'DOCKER_INFLUXDB_INIT_ADMIN_TOKEN', 'RUL_ALERT_THRESHOLD', 'ALERT_SUSTAINED_CYCLES']
+
+=== CHECK 3: fail-fast error when INFLUXDB_TOKEN is unset ===
+Caught expected fail-fast exception: CRITICAL CONFIGURATION ERROR: INFLUXDB_TOKEN environment variable is required but not set.
+
+=== CHECK 4: .gitignore verification ===
+.env
+.env is ignored: 0

@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import joblib
 import numpy as np
@@ -73,12 +74,19 @@ def startup_event():
 
     # Setup InfluxDB client connection
     influx_url = os.getenv("INFLUXDB_URL", "http://localhost:8086")
-    influx_token = os.getenv("INFLUXDB_TOKEN", "my-super-secret-admin-token-12345")
-    try:
-        influx_client = InfluxDBClient(url=influx_url, token=influx_token, org="twinedge")
-        print(f"Connected to InfluxDB at {influx_url}")
-    except Exception as e:
-        print(f"Failed to connect to InfluxDB: {e}")
+    influx_token = os.getenv("INFLUXDB_TOKEN")
+    if not influx_token:
+        # Check if running in test environment; if not, raise error
+        if os.getenv("TESTING") == "1" or "pytest" in sys.modules:
+            print("Warning: INFLUXDB_TOKEN not set in test environment, proceeding without InfluxDB connection")
+        else:
+            raise RuntimeError("CRITICAL CONFIGURATION ERROR: INFLUXDB_TOKEN environment variable is required but not set.")
+    else:
+        try:
+            influx_client = InfluxDBClient(url=influx_url, token=influx_token, org=os.getenv("INFLUXDB_ORG", "twinedge"))
+            print(f"Connected to InfluxDB at {influx_url}")
+        except Exception as e:
+            print(f"Failed to connect to InfluxDB: {e}")
 
 last_simulator_mqtt_status = None
 

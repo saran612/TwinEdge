@@ -34,11 +34,11 @@ if [ "$ACTION" == "start" ]; then
         --name twinedge_influxdb \
         -p 8086:8086 \
         -e DOCKER_INFLUXDB_INIT_MODE=setup \
-        -e DOCKER_INFLUXDB_INIT_USERNAME=admin \
-        -e DOCKER_INFLUXDB_INIT_PASSWORD=adminpassword \
-        -e DOCKER_INFLUXDB_INIT_ORG=twinedge \
-        -e DOCKER_INFLUXDB_INIT_BUCKET=telemetry \
-        -e DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=my-super-secret-admin-token-12345 \
+        -e DOCKER_INFLUXDB_INIT_USERNAME="${DOCKER_INFLUXDB_INIT_USERNAME:-admin}" \
+        -e DOCKER_INFLUXDB_INIT_PASSWORD="${DOCKER_INFLUXDB_INIT_PASSWORD:-adminpassword}" \
+        -e DOCKER_INFLUXDB_INIT_ORG="${INFLUXDB_ORG:-twinedge}" \
+        -e DOCKER_INFLUXDB_INIT_BUCKET="${INFLUXDB_BUCKET:-telemetry}" \
+        -e DOCKER_INFLUXDB_INIT_ADMIN_TOKEN="${INFLUXDB_TOKEN:-admin-token-placeholder}" \
         influxdb:2.7.6
         
     # 3. Start MQTT Subscriber
@@ -48,12 +48,12 @@ if [ "$ACTION" == "start" ]; then
     docker run -d \
         --name twinedge_subscriber \
         --network host \
-        -e MQTT_HOST=localhost \
-        -e MQTT_PORT=1883 \
-        -e INFLUXDB_URL=http://localhost:8086 \
-        -e INFLUXDB_TOKEN=my-super-secret-admin-token-12345 \
-        -e INFLUXDB_ORG=twinedge \
-        -e INFLUXDB_BUCKET=telemetry \
+        -e MQTT_HOST="${MQTT_HOST:-localhost}" \
+        -e MQTT_PORT="${MQTT_PORT:-1883}" \
+        -e INFLUXDB_URL="${INFLUXDB_URL:-http://localhost:8086}" \
+        -e INFLUXDB_TOKEN="${INFLUXDB_TOKEN:-admin-token-placeholder}" \
+        -e INFLUXDB_ORG="${INFLUXDB_ORG:-twinedge}" \
+        -e INFLUXDB_BUCKET="${INFLUXDB_BUCKET:-telemetry}" \
         -v "$SCRIPT_DIR/backend:/app" \
         twinedge_backend \
         python3 -u app/influx_writer.py

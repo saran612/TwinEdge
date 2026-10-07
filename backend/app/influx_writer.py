@@ -11,7 +11,9 @@ from influxdb_client.client.write_api import SYNCHRONOUS
 MQTT_HOST = os.getenv("MQTT_HOST", "localhost")
 MQTT_PORT = int(os.getenv("MQTT_PORT", 1883))
 INFLUXDB_URL = os.getenv("INFLUXDB_URL", "http://localhost:8086")
-INFLUXDB_TOKEN = os.getenv("INFLUXDB_TOKEN", "my-super-secret-admin-token-12345")
+INFLUXDB_TOKEN = os.getenv("INFLUXDB_TOKEN")
+if not INFLUXDB_TOKEN:
+    raise RuntimeError("CRITICAL CONFIGURATION ERROR: INFLUXDB_TOKEN environment variable is required but not set.")
 INFLUXDB_ORG = os.getenv("INFLUXDB_ORG", "twinedge")
 INFLUXDB_BUCKET = os.getenv("INFLUXDB_BUCKET", "telemetry")
 
