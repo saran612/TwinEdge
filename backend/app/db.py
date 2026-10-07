@@ -35,34 +35,11 @@ def init_db():
         )
     """)
 
-    # Clean legacy duplicates if table already existed without constraint
-    cursor.execute("""
-        DELETE FROM telemetry_buffer 
-        WHERE id NOT IN (
-            SELECT MAX(id) FROM telemetry_buffer GROUP BY engine_id, cycle
-        )
-    """)
-
     # Ensure unique index exists
     cursor.execute("""
         CREATE UNIQUE INDEX IF NOT EXISTS idx_telemetry_buffer_engine_cycle 
         ON telemetry_buffer(engine_id, cycle)
     """)
-    
-    # Deduplicate pending alerts: keep only the latest active cycle per engine
-    cursor.execute("""
-        DELETE FROM alerts 
-        WHERE status = 'PENDING' 
-        AND id NOT IN (
-            SELECT a1.id FROM alerts a1 
-            WHERE a1.status = 'PENDING' 
-            AND a1.cycle = (
-                SELECT MAX(a2.cycle) FROM alerts a2 
-                WHERE a2.engine_id = a1.engine_id AND a2.status = 'PENDING'
-            )
-        )
-    """)
-
     conn.commit()
     conn.close()
     print(f"Database initialized at {DB_PATH}")
