@@ -1,0 +1,13 @@
+{
+  "files": {
+    "model.onnx": "032c3efa3156470e5ef7a3f31eb574d2830d4ff473625b6be814a05c0f1a1b7b",
+    "scaler.json": "9c2b094a38f409604e19304026964d7d2bb07b6a6d931418236f00efba3a5c43",
+    "features.json": "78d434a873690c92d0bb56e0b704b8c8df0bbab3da4193f7b7cb54654857822f",
+    "training_stats.json": "1facf5518ff5778f272901a97e23ae1d777e7cbaf4015a87ec5801e5da7932bb",
+    "replay_engines.json": "9628d496130cade157ac24713f39921ddccb1957735b94aea615f7e070c703e4"
+  },
+  "engine_counts": 7,
+  "parity_sample_count": 220,
+  "dataset": "C-MAPSS FD001",
+  "model_architecture": "1D-CNN (Window N=30, 14 sensors, RUL cap 125)"
+}

@@ -1,0 +1,105 @@
+{
+  "feature_ids": [
+    "s_2",
+    "s_3",
+    "s_4",
+    "s_7",
+    "s_8",
+    "s_9",
+    "s_11",
+    "s_12",
+    "s_13",
+    "s_14",
+    "s_15",
+    "s_17",
+    "s_20",
+    "s_21"
+  ],
+  "features": [
+    {
+      "id": "s_2",
+      "name": "T24",
+      "description": "LPC Outlet Temp",
+      "unit": "\u00b0R"
+    },
+    {
+      "id": "s_3",
+      "name": "T30",
+      "description": "HPC Outlet Temp",
+      "unit": "\u00b0R"
+    },
+    {
+      "id": "s_4",
+      "name": "T50",
+      "description": "LPT Outlet Temp",
+      "unit": "\u00b0R"
+    },
+    {
+      "id": "s_7",
+      "name": "P30",
+      "description": "HPC Outlet Static Pressure",
+      "unit": "psia"
+    },
+    {
+      "id": "s_8",
+      "name": "Nf",
+      "description": "Fan Speed",
+      "unit": "rpm"
+    },
+    {
+      "id": "s_9",
+      "name": "Nc",
+      "description": "Core Speed",
+      "unit": "rpm"
+    },
+    {
+      "id": "s_11",
+      "name": "Ps30",
+      "description": "HPC Static Pressure",
+      "unit": "psia"
+    },
+    {
+      "id": "s_12",
+      "name": "phi",
+      "description": "Fuel-Air Ratio",
+      "unit": "\u2014"
+    },
+    {
+      "id": "s_13",
+      "name": "NRf",
+      "description": "Corrected Fan Speed",
+      "unit": "rpm"
+    },
+    {
+      "id": "s_14",
+      "name": "NRc",
+      "description": "Corrected Core Speed",
+      "unit": "rpm"
+    },
+    {
+      "id": "s_15",
+      "name": "BPR",
+      "description": "Bypass Ratio",
+      "unit": "\u2014"
+    },
+    {
+      "id": "s_17",
+      "name": "htBleed",
+      "description": "Bleed Enthalpy",
+      "unit": "\u2014"
+    },
+    {
+      "id": "s_20",
+      "name": "W31",
+      "description": "HPT Coolant Bleed",
+      "unit": "lbm/s"
+    },
+    {
+      "id": "s_21",
+      "name": "W32",
+      "description": "LPT Coolant Bleed",
+      "unit": "lbm/s"
+    }
+  ],
+  "component_map_assumed": "src/config/component_map.json"
+}
