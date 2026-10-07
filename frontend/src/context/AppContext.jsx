@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { api } from '../services/api';
+import { defaultReplayController } from '../services/replayController';
 
 const AppContext = createContext(null);
 
@@ -10,9 +11,12 @@ export const DATA_SOURCES = {
 };
 
 export function AppProvider({ children }) {
+  const replayController = defaultReplayController;
+  const availableEngines = replayController.getEnginesList();
+
   // Global Shell state
   const [dataSource, setDataSource] = useState(DATA_SOURCES.REPLAY);
-  const [activeEngineId, setActiveEngineId] = useState(1);
+  const [activeEngineId, setActiveEngineId] = useState(availableEngines[0]?.id || 1);
   const [currentCycle, setCurrentCycle] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1); // 0.5x - 8x
@@ -92,6 +96,8 @@ export function AppProvider({ children }) {
         setAlerts,
         pendingAlertCount,
         setPendingAlertCount,
+        replayController,
+        availableEngines,
       }}
     >
       {children}

@@ -13,6 +13,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import RubricsDrawer from '../common/RubricsDrawer';
+import EngineSplitBadge from '../common/EngineSplitBadge';
 import { HEALTH_CONFIG } from '../../config/rubrics';
 
 export const NAV_PAGES = [
@@ -32,6 +33,7 @@ export default function GlobalShell({ activePage, onNavigate, children }) {
     setDataSource,
     activeEngineId,
     setActiveEngineId,
+    availableEngines,
     isRubricsOpen,
     setIsRubricsOpen,
     connectivity,
@@ -87,17 +89,18 @@ export default function GlobalShell({ activePage, onNavigate, children }) {
                 onChange={(e) => setActiveEngineId(Number(e.target.value))}
                 className="bg-slate-900 border border-slate-700 text-xs text-slate-200 font-mono rounded px-2.5 py-1 appearance-none pr-7 focus:outline-none focus:border-indigo-500 cursor-pointer"
               >
-                <option value={1}>#001 (HELD-OUT VAL)</option>
-                <option value={2}>#002 (HELD-OUT VAL)</option>
-                <option value={3}>#003 (HELD-OUT VAL)</option>
-                <option value={4}>#004 (TEST)</option>
-                <option value={5}>#005 (TEST)</option>
+                {(availableEngines || []).map((eng) => (
+                  <option key={`${eng.split}_${eng.id}`} value={eng.id}>
+                    #{String(eng.id).padStart(3, '0')} ({eng.split === 'HELD-OUT VALIDATION' ? 'HELD-OUT VAL' : eng.split})
+                  </option>
+                ))}
               </select>
               <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2 top-2 pointer-events-none" />
             </div>
-            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-950 border border-blue-800 text-blue-300">
-              {activeEngineId <= 3 ? 'HELD-OUT VAL' : 'TEST'}
-            </span>
+            {(() => {
+              const cur = (availableEngines || []).find((e) => e.id === activeEngineId);
+              return cur ? <EngineSplitBadge split={cur.split} /> : null;
+            })()}
           </div>
         </div>
 
