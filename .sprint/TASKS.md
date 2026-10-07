@@ -3,7 +3,7 @@
 | id | task | priority | status | verification | evidence |
 |---|---|---|---|---|---|
 | F0 | Discovery: frontend structure, App.jsx, Turbofan3DView.jsx, 3D assets search + mesh_report.md, backend endpoints, hardening state | P0 | VERIFIED | Output .sprint/frontend/discovery.md and .sprint/frontend/mesh_report.md | .sprint/evidence/F0.txt |
-| F1 | Foundation: router, shell, tokens, store/state, API client with explicit errors, shared components, provenance/status/metric, Rubrics drawer | P0 | TODO | Component test/render, clean build, Rubrics drawer verified | .sprint/evidence/F1.txt |
+| F1 | Foundation: router, shell, tokens, store/state, API client with explicit errors, shared components, provenance/status/metric, Rubrics drawer | P0 | VERIFIED | Component test/render, clean build, Rubrics drawer verified | .sprint/evidence/F1.txt |
 | F2 | Offline assets exporter + ORT-web engine + preprocessing in JS + parity tests | P0 | TODO | max abs diff < 1e-3 cycles on >=200 windows verified in Vitest | .sprint/evidence/F2.txt |
 | F3 | Replay controller + data-source switch (Live / Replay / Simulation) + held-out/test engine handling and badges | P0 | TODO | Source switch behaves correctly, engine split badges display | .sprint/evidence/F3.txt |
 | F4 | Digital Twin page: 3D load, mapping, selection, panels, EOL data, counterfactual impact, color modes | P0 | TODO | 3D canvas renders, components select, counterfactual impact computed | .sprint/evidence/F4.txt |

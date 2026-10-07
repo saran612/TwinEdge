@@ -1,0 +1,87 @@
+{
+  "description": "Engineering assumption: NASA C-MAPSS FD001 sensor-to-turbofan-component attribution map. Tagged ASSUMED per Honesty Rule H3.",
+  "components": [
+    {
+      "id": "fan",
+      "name": "Fan & Bypass Duct",
+      "mesh_keywords": ["fan", "blade", "inner duct"],
+      "sensors": ["s_8", "s_13", "s_15"],
+      "modeled_fault": false,
+      "description": "Low-pressure single-stage fan generating forward bypass thrust.",
+      "anchor_position": [-1.8, 0, 0]
+    },
+    {
+      "id": "lpc",
+      "name": "Low Pressure Compressor (LPC)",
+      "mesh_keywords": ["compressor", "booster"],
+      "sensors": ["s_2"],
+      "modeled_fault": false,
+      "description": "Multi-stage booster compressor driven by low-pressure shaft.",
+      "anchor_position": [-1.1, 0, 0]
+    },
+    {
+      "id": "hpc",
+      "name": "High Pressure Compressor (HPC)",
+      "mesh_keywords": ["hpc", "compressor"],
+      "sensors": ["s_3", "s_7", "s_11"],
+      "modeled_fault": true,
+      "fault_mode_note": "Primary degradation mode modeled in C-MAPSS FD001 (blade erosion & clearance wear).",
+      "description": "High-pressure multi-stage axial compressor driven by HP turbine.",
+      "anchor_position": [-0.3, 0, 0]
+    },
+    {
+      "id": "combustor",
+      "name": "Combustor",
+      "mesh_keywords": ["combustor", "chamber"],
+      "sensors": ["s_12"],
+      "modeled_fault": false,
+      "description": "Annular combustion chamber with fuel injection nozzles.",
+      "anchor_position": [0.4, 0, 0]
+    },
+    {
+      "id": "hpt",
+      "name": "High Pressure Turbine (HPT)",
+      "mesh_keywords": ["hpt", "turbine"],
+      "sensors": ["s_20"],
+      "modeled_fault": false,
+      "description": "Single-stage high-pressure turbine extracting energy to drive HPC.",
+      "anchor_position": [0.9, 0, 0]
+    },
+    {
+      "id": "lpt",
+      "name": "Low Pressure Turbine (LPT)",
+      "mesh_keywords": ["lpt", "turbine blades low pressure"],
+      "sensors": ["s_4", "s_21"],
+      "modeled_fault": false,
+      "description": "Multi-stage low-pressure turbine extracting energy to drive Fan & LPC.",
+      "anchor_position": [1.5, 0, 0]
+    },
+    {
+      "id": "nozzle",
+      "name": "Core Exhaust Nozzle",
+      "mesh_keywords": ["nozzle", "cone", "exhaust"],
+      "sensors": [],
+      "modeled_fault": false,
+      "description": "Convergent core exhaust nozzle directing high-speed jet gas.",
+      "anchor_position": [2.2, 0, 0]
+    },
+    {
+      "id": "hp_spool",
+      "name": "High Pressure Spool & Shaft",
+      "mesh_keywords": ["drive shaft", "gear", "bevel"],
+      "sensors": ["s_9", "s_14"],
+      "modeled_fault": false,
+      "description": "High-speed rotating spool connecting HPT to HPC.",
+      "anchor_position": [0.3, -0.4, 0]
+    },
+    {
+      "id": "lp_spool",
+      "name": "Low Pressure Spool & Shaft",
+      "mesh_keywords": ["shaft", "chamfer"],
+      "sensors": ["s_8", "s_13"],
+      "modeled_fault": false,
+      "description": "Concentric inner drive shaft connecting LPT to Fan and LPC.",
+      "anchor_position": [0.1, -0.6, 0]
+    }
+  ]
+}
