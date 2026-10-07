@@ -1,0 +1,16 @@
+=== CHECK 1: Deployment files created ===
+-rw-r--r-- 1 saran saran 1028 Oct  7 12:34 deploy/Caddyfile
+-rw-r--r-- 1 saran saran 3305 Oct  7 12:35 deploy/README.md
+-rwxr-xr-x 1 saran saran 2255 Oct  7 12:37 deploy/smoke_test.sh
+-rw-r--r-- 1 saran saran  918 Oct  7 12:34 docker-compose.prod.yml
+-rw-r--r-- 1 saran saran  294 Oct  7 12:34 frontend/Dockerfile
+
+=== CHECK 2: Docker availability status ===
+Docker CLI: UNVERIFIED (docker not installed on host machine; configuration syntax verified via yaml/python validation)
+
+=== CHECK 3: Shellcheck availability status ===
+Shellcheck: UNVERIFIED (shellcheck not installed on host; bash -n syntax check PASS)
+bash -n syntax validation: PASS
+
+=== CHECK 4: smoke_test.sh execution against local run ===
+Smoke test passed against local backend (127.0.0.1:8899) with 6/6 checks OK: /health, /model/info, /edge/stats, /predict, /audit, /audit/verify

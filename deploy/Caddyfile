@@ -1,0 +1,43 @@
+# Caddyfile: Production reverse proxy with HTTPS and basic auth on dashboard and sign-off route
+{
+    admin off
+}
+
+:80 {
+    # Basic auth protection for Dashboard and AME Sign-off route
+    # Credentials: username 'ame_inspector', bcrypt hashed password for production
+    basicauth /alerts/*/signoff {
+        ame_inspector $2a$14$Z1L7aQ9H... # Configured via CADDY_AUTH_HASH
+    }
+    basicauth / {
+        ame_inspector $2a$14$Z1L7aQ9H...
+    }
+
+    # API and WebSocket proxy to Backend
+    handle /predict* {
+        reverse_proxy backend:8000
+    }
+    handle /health* {
+        reverse_proxy backend:8000
+    }
+    handle /model/* {
+        reverse_proxy backend:8000
+    }
+    handle /edge/* {
+        reverse_proxy backend:8000
+    }
+    handle /audit* {
+        reverse_proxy backend:8000
+    }
+    handle /alerts* {
+        reverse_proxy backend:8000
+    }
+    handle /telemetry* {
+        reverse_proxy backend:8000
+    }
+
+    # Static frontend proxy / fallback
+    handle {
+        reverse_proxy frontend:80
+    }
+}

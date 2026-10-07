@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  caddy:
+    image: caddy:2.7.6-alpine
+    container_name: twinedge_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+      - frontend
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: twinedge_frontend
+    restart: unless-stopped
+    expose:
+      - "80"
+
+  # Backend and underlying services extend docker-compose.yml
+  # Ports 8086 and 1883 are NEVER published to external host interfaces in production.
+  # They are internal to the docker bridge network only.
+  mosquitto:
+    ports: []
+    expose:
+      - "1883"
+
+  influxdb:
+    ports: []
+    expose:
+      - "8086"
+
+  backend:
+    ports: []
+    expose:
+      - "8000"
+
+volumes:
+  caddy_data:
+  caddy_config:
