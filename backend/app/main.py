@@ -1,10 +1,12 @@
 import os
 import sys
 import json
+import time
+import collections
 import joblib
 import numpy as np
 import onnxruntime as ort
-from fastapi import FastAPI, HTTPException, Body
+from fastapi import FastAPI, HTTPException, Body, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
@@ -37,14 +39,24 @@ app.add_middleware(
 # Paths
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_PATH = os.path.join(BASE_DIR, "model", "twinedge_rul.onnx")
+TFLITE_PATH = os.path.join(BASE_DIR, "model", "twinedge_rul.tflite")
 SCALER_PATH = os.path.join(BASE_DIR, "data", "processed", "scaler.joblib")
 RESULTS_PATH = os.path.join(BASE_DIR, "model", "results.json")
+FEATURES_PATH = os.path.join(BASE_DIR, "data", "processed", "active_features.txt")
 
 # Global variables loaded at startup
 ort_session = None
 scaler = None
 influx_client = None
 metadata = {}
+
+# Metrics & telemetry tracking state
+latency_history = collections.deque(maxlen=500)
+edge_stats_state = {
+    "total_calls": 0,
+    "raw_window_bytes": 0,          # 30 * 14 * 4 bytes per uncompressed window
+    "upstream_payload_bytes": 0     # actual serialized body bytes sent/received
+}
 
 @app.on_event("startup")
 def startup_event():
@@ -140,13 +152,27 @@ def health():
     }
 
 @app.post("/predict")
-def predict(data: WindowInput):
-    global ort_session, scaler, last_simulator_mqtt_status
+async def predict(data: WindowInput, request: Request):
+    global ort_session, scaler, last_simulator_mqtt_status, latency_history, edge_stats_state
     if ort_session is None or scaler is None:
         raise HTTPException(status_code=503, detail="Model or Scaler not loaded on server.")
         
     if data.mqtt_active is not None:
         last_simulator_mqtt_status = data.mqtt_active
+
+    # Track upstream payload bytes (actual serialized request body)
+    try:
+        body_bytes = await request.body()
+        payload_len = len(body_bytes)
+    except Exception:
+        payload_len = len(json.dumps(data.dict()).encode("utf-8"))
+
+    # Raw window bytes: uncompressed float32 tensor of shape (30, 14) -> 30 * 14 * 4 = 1680 bytes
+    raw_window_bytes = 30 * 14 * 4
+
+    edge_stats_state["total_calls"] += 1
+    edge_stats_state["raw_window_bytes"] += raw_window_bytes
+    edge_stats_state["upstream_payload_bytes"] += payload_len
 
     try:
         window_arr = np.array(data.window, dtype=np.float32)
@@ -171,22 +197,26 @@ def predict(data: WindowInput):
             )
             
         # Early-cycle front-padding matching preprocess.py:
-        # pad_len = window - len(values)
-        # values = np.vstack([np.repeat(values[0:1], pad_len, axis=0), values])
         if num_rows < 30:
             pad_len = 30 - num_rows
             window_arr = np.vstack([np.repeat(window_arr[0:1], pad_len, axis=0), window_arr])
             
         # 1. Standard scale the window features using the fitted scaler
-        # The scaler was fitted on 2D data, so we scale the 30 cycles
         scaled_window = scaler.transform(window_arr)
         
         # 2. Reshape for ONNX input: (1, 30, 14)
         onnx_input = np.expand_dims(scaled_window, axis=0).astype(np.float32)
         
-        # 3. Run ONNX inference
+        # 3. Run ONNX inference timed with time.perf_counter()
+        t0 = time.perf_counter()
         input_name = ort_session.get_inputs()[0].name
         ort_outputs = ort_session.run(None, {input_name: onnx_input})
+        t1 = time.perf_counter()
+        inference_latency_ms = (t1 - t0) * 1000.0
+
+        # Record in rolling latency deque
+        latency_history.append(inference_latency_ms)
+
         rul_pred = float(ort_outputs[0][0][0])
         
         # Clamp RUL between 0 and 125
@@ -226,7 +256,8 @@ def predict(data: WindowInput):
 
         return {
             "rul_prediction": round(rul_pred, 2),
-            "anomaly_flag": anomaly_flag
+            "anomaly_flag": anomaly_flag,
+            "inference_latency_ms": round(inference_latency_ms, 3)
         }
         
     except HTTPException as he:
@@ -386,4 +417,78 @@ def get_audit_verify():
         "ok": ok,
         "first_bad_row": bad_row,
         "message": message
+    }
+
+# H6. GET /model/info - live model metadata, file sizes, shapes, test RMSE, and latency stats
+@app.get("/model/info")
+def get_model_info():
+    global ort_session, latency_history, metadata
+    
+    # ONNX & TFLite file sizes read directly from disk
+    onnx_size_bytes = os.path.getsize(MODEL_PATH) if os.path.exists(MODEL_PATH) else 0
+    tflite_size_bytes = os.path.getsize(TFLITE_PATH) if os.path.exists(TFLITE_PATH) else 0
+    
+    # Input/Output shapes
+    if ort_session is not None:
+        input_shape = [dim if isinstance(dim, int) else -1 for dim in ort_session.get_inputs()[0].shape]
+        output_shape = [dim if isinstance(dim, int) else -1 for dim in ort_session.get_outputs()[0].shape]
+    else:
+        input_shape = [1, 30, 14]
+        output_shape = [1, 1]
+
+    # Feature list
+    features = []
+    if os.path.exists(FEATURES_PATH):
+        with open(FEATURES_PATH, "r") as f:
+            features = [line.strip() for line in f if line.strip()]
+
+    # Test RMSE read directly from results.json
+    test_rmse = None
+    if os.path.exists(RESULTS_PATH):
+        try:
+            with open(RESULTS_PATH, "r") as f:
+                res_data = json.load(f)
+                test_rmse = res_data.get("test_rmse")
+        except Exception:
+            pass
+
+    # Latency percentiles over last 500 calls
+    latencies = list(latency_history)
+    if latencies:
+        p50 = float(np.percentile(latencies, 50))
+        p95 = float(np.percentile(latencies, 95))
+    else:
+        p50 = 0.0
+        p95 = 0.0
+
+    return {
+        "model_name": "twinedge_rul_cnn",
+        "onnx_size_bytes": onnx_size_bytes,
+        "tflite_size_bytes": tflite_size_bytes,
+        "input_shape": input_shape,
+        "output_shape": output_shape,
+        "window_n": 30,
+        "features": features,
+        "feature_count": len(features),
+        "test_rmse": test_rmse,
+        "latency_p50_ms": round(p50, 3),
+        "latency_p95_ms": round(p95, 3),
+        "sample_count": len(latencies)
+    }
+
+# H7. GET /edge/stats - measured edge vs upstream bytes and empirical ratio
+@app.get("/edge/stats")
+def get_edge_stats():
+    global edge_stats_state
+    raw = edge_stats_state["raw_window_bytes"]
+    upstream = edge_stats_state["upstream_payload_bytes"]
+    calls = edge_stats_state["total_calls"]
+    # Ratio of upstream bytes to raw float32 tensor bytes
+    ratio = (upstream / raw) if raw > 0 else 0.0
+    
+    return {
+        "total_calls": calls,
+        "raw_window_bytes": raw,
+        "upstream_payload_bytes": upstream,
+        "payload_to_raw_ratio": round(ratio, 4)
     }
