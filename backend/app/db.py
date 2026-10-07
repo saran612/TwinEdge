@@ -65,6 +65,23 @@ def init_db():
             row_hash TEXT NOT NULL
         )
     """)
+
+    # Create immutable predictions table for K-cycle alert gating
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS predictions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            engine_id INTEGER NOT NULL,
+            cycle INTEGER NOT NULL,
+            rul_pred REAL NOT NULL,
+            timestamp TEXT NOT NULL,
+            UNIQUE(engine_id, cycle)
+        )
+    """)
+    cursor.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_predictions_engine_cycle
+        ON predictions(engine_id, cycle)
+    """)
+
     conn.commit()
     conn.close()
     print(f"Database initialized at {DB_PATH}")
@@ -115,6 +132,91 @@ def append_audit_entry(alert_id: str, engine_id: int, cycle: int, action: str, r
         "prev_hash": prev_hash,
         "row_hash": row_hash
     }
+
+def record_prediction_and_check_alert(engine_id: int, cycle: int, rul_pred: float, threshold: float = 60.0, k: int = 3) -> tuple:
+    """
+    Inserts prediction into predictions table (unique on engine_id + cycle, ignores duplicates).
+    Evaluates whether the last K stored predictions (by cycle, cycle <= current) are ALL below threshold.
+    If so, raises or updates an alert for this engine if one isn't already active/handled.
+    Ensures at most one pending alert per engine.
+    Returns: (alert_raised_or_updated: bool, anomaly_flag: int, alert_id: Optional[str])
+    """
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    now_ts = datetime.utcnow().isoformat()
+    
+    # 1. Insert prediction (ignore duplicates)
+    cursor.execute("""
+        INSERT OR IGNORE INTO predictions (engine_id, cycle, rul_pred, timestamp)
+        VALUES (?, ?, ?, ?)
+    """, (engine_id, cycle, rul_pred, now_ts))
+    
+    # 2. Query last K stored predictions for this engine where cycle <= current_cycle ordered by cycle DESC
+    cursor.execute("""
+        SELECT cycle, rul_pred FROM predictions
+        WHERE engine_id = ? AND cycle <= ?
+        ORDER BY cycle DESC
+        LIMIT ?
+    """, (engine_id, cycle, k))
+    last_k_rows = cursor.fetchall()
+    
+    # Alert conditions:
+    # We must have at least K predictions, and ALL K predictions must have rul_pred < threshold
+    sustained_k = (len(last_k_rows) == k) and all(r["rul_pred"] < threshold for r in last_k_rows)
+    
+    alert_created = False
+    alert_id = None
+    
+    if sustained_k:
+        # Check if there is already an active PENDING alert for this engine
+        cursor.execute("SELECT id, cycle FROM alerts WHERE engine_id = ? AND status = 'PENDING'", (engine_id,))
+        existing_pending = cursor.fetchone()
+        
+        if existing_pending:
+            # Update existing pending alert if current cycle is newer or equal
+            alert_id = existing_pending["id"]
+            cursor.execute("""
+                UPDATE alerts
+                SET cycle = ?, rul_prediction = ?, anomaly_flag = 1, timestamp = ?
+                WHERE id = ?
+            """, (cycle, rul_pred, now_ts, alert_id))
+            append_audit_entry(
+                alert_id=alert_id,
+                engine_id=engine_id,
+                cycle=cycle,
+                action="ALERT_UPDATED",
+                reviewer_id="",
+                predicted_rul=rul_pred,
+                notes=f"Sustained alert updated at cycle {cycle} (last {k} cycles < {threshold})",
+                conn=conn
+            )
+            alert_created = True
+        else:
+            # Check if this exact cycle was already alerted in a resolved ticket
+            cursor.execute("SELECT id FROM alerts WHERE engine_id = ? AND cycle = ?", (engine_id, cycle))
+            existing_cycle = cursor.fetchone()
+            if not existing_cycle:
+                alert_id = f"alert_engine_{engine_id}_cycle_{cycle}"
+                cursor.execute("""
+                    INSERT INTO alerts (id, engine_id, cycle, rul_prediction, anomaly_flag, status, timestamp)
+                    VALUES (?, ?, ?, ?, 1, 'PENDING', ?)
+                """, (alert_id, engine_id, cycle, rul_pred, now_ts))
+                append_audit_entry(
+                    alert_id=alert_id,
+                    engine_id=engine_id,
+                    cycle=cycle,
+                    action="ALERT_RAISED",
+                    reviewer_id="",
+                    predicted_rul=rul_pred,
+                    notes=f"Alert raised: sustained {k} cycles with RUL < {threshold}",
+                    conn=conn
+                )
+                alert_created = True
+    
+    conn.commit()
+    conn.close()
+    return alert_created, 1 if sustained_k else 0, alert_id
 
 def add_alert(alert_id, engine_id, cycle, rul_prediction, anomaly_flag):
     conn = sqlite3.connect(DB_PATH)

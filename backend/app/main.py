@@ -12,7 +12,16 @@ from datetime import datetime
 import sqlite3
 from influxdb_client import InfluxDBClient
 
-from app.db import get_unresolved_alerts, get_all_alerts, signoff_alert, add_alert, get_audit_trail, verify_audit_trail, DB_PATH
+from app.db import (
+    get_unresolved_alerts, 
+    get_all_alerts, 
+    signoff_alert, 
+    add_alert, 
+    record_prediction_and_check_alert,
+    get_audit_trail, 
+    verify_audit_trail, 
+    DB_PATH
+)
 
 app = FastAPI(title="TwinEdge Backend")
 
@@ -183,28 +192,16 @@ def predict(data: WindowInput):
         # Clamp RUL between 0 and 125
         rul_pred = max(0.0, min(125.0, rul_pred))
         
-        # 4. Determine anomaly flag
-        # NOTE (Threshold Justification): 60 cycles is a conservative operational
-        # heuristic calibrated to trigger maintenance lead time ahead of scheduled
-        # A/B-check intervals. Pending full empirical ROC / cost-sensitivity tuning
-        # against airline operational loss functions.
-        anomaly_flag = int(rul_pred < 60)
-        
-        # 5. Compute confidence score
-        # Confidence increases as RUL decreases (i.e. more certain about failure)
-        # and capped between 0.5 and 0.98
-        confidence = max(0.5, min(0.98, 1.0 - (rul_pred / 125.0) * 0.3))
-        
-        # 6. If anomaly is flagged, auto-add it to the sign-off queue
-        if anomaly_flag:
-            alert_id = f"alert_engine_{data.engine_id}_cycle_{data.cycle}"
-            add_alert(
-                alert_id=alert_id,
-                engine_id=data.engine_id,
-                cycle=data.cycle,
-                rul_prediction=round(rul_pred, 1),
-                anomaly_flag=anomaly_flag
-            )
+        # 4. K-cycle alert gating using insert-only predictions table
+        threshold = float(os.getenv("RUL_ALERT_THRESHOLD", 60.0))
+        k_cycles = int(os.getenv("ALERT_SUSTAINED_CYCLES", 3))
+        alert_raised, anomaly_flag, alert_id = record_prediction_and_check_alert(
+            engine_id=data.engine_id,
+            cycle=data.cycle,
+            rul_pred=round(rul_pred, 1),
+            threshold=threshold,
+            k=k_cycles
+        )
 
         # 7. Ingest telemetry into local SQLite buffer (idempotent upsert)
         try:

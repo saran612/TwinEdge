@@ -1,0 +1,8 @@
+Database initialized at /home/saran/projects/twinedge/backend/app/db.sqlite3
+Testing Engine 279466
+Pass 1: Single noisy dip -> no alert
+Pass 2: Recovery cycle -> no alert
+Pass 3: Sustained K cycles -> exactly one alert raised
+Pass 4: Exactly one pending alert in DB
+Pass 5: Duplicate prediction cycle ignored idempotently
+Pass 6: Backward/out-of-order cycle evaluated properly without false alerts
