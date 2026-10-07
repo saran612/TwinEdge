@@ -226,8 +226,7 @@ def predict(data: WindowInput):
 
         return {
             "rul_prediction": round(rul_pred, 2),
-            "anomaly_flag": anomaly_flag,
-            "confidence": round(confidence, 2)
+            "anomaly_flag": anomaly_flag
         }
         
     except HTTPException as he:
