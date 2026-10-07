@@ -45,16 +45,35 @@ def test_alerts_signoff():
         assert response.status_code == 200
         alerts = response.json()
         assert any(a["id"] == "test_pytest_123" for a in alerts)
-        
-        # Sign off the alert
+
+        # 1. Test missing reviewer_id -> 4xx (422)
+        res_missing_rev = client.post("/alerts/test_pytest_123/signoff", json={
+            "decision": "approve",
+            "reviewer_id": ""
+        })
+        assert res_missing_rev.status_code in [400, 422]
+
+        # 2. Test bad decision -> 400
+        res_bad_dec = client.post("/alerts/test_pytest_123/signoff", json={
+            "decision": "invalid_decision",
+            "reviewer_id": "TECH-01"
+        })
+        assert res_bad_dec.status_code == 400
+
+        # 3. Valid sign-off -> 200
         signoff_payload = {
-            "status": "APPROVED",
+            "decision": "approve",
+            "reviewer_id": "TECH-01",
             "notes": "Pytest verification notes"
         }
         signoff_response = client.post("/alerts/test_pytest_123/signoff", json=signoff_payload)
         assert signoff_response.status_code == 200
         assert signoff_response.json()["status"] == "success"
         
+        # 4. Double sign-off -> 409
+        double_signoff_res = client.post("/alerts/test_pytest_123/signoff", json=signoff_payload)
+        assert double_signoff_res.status_code == 409
+
         # Verify it is no longer in unresolved queue
         response = client.get("/alerts")
         assert response.status_code == 200

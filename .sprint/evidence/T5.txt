@@ -1,0 +1,15 @@
+/home/saran/projects/twinedge/backend/venv/lib/python3.11/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+  from starlette.testclient import TestClient as TestClient  # noqa
+/home/saran/projects/twinedge/backend/venv/lib/python3.11/site-packages/sklearn/base.py:525: InconsistentVersionWarning: Trying to unpickle estimator StandardScaler from version 1.9.0 when using version 1.9.1. This might lead to breaking code or invalid results. Use at your own risk. For more info please refer to:
+https://scikit-learn.org/stable/model_persistence.html#security-maintainability-limitations
+  warnings.warn(
+Database initialized at /home/saran/projects/twinedge/backend/app/db.sqlite3
+Loaded ONNX model successfully from /home/saran/projects/twinedge/backend/model/twinedge_rul.onnx
+Loaded StandardScaler successfully from /home/saran/projects/twinedge/backend/data/processed/scaler.joblib
+Loaded metadata successfully from /home/saran/projects/twinedge/backend/model/results.json
+Warning: INFLUXDB_TOKEN not set in test environment, proceeding without InfluxDB connection
+Check 1 passed: missing reviewer_id returned 422
+Check 2 passed: bad decision returned 400
+Check 3 passed: valid sign-off returned 200: {'status': 'success', 'decision': 'approved', 'reviewer_id': 'AME-007', 'message': 'Alert test_t5_2dd0a444 signed off as APPROVED'}
+Check 4 passed: double sign-off rejected with 409: {'detail': 'Alert test_t5_2dd0a444 has already been signed off with status APPROVED'}
+Check 5 passed: audit trail entry recorded: {'id': 9, 'alert_id': 'test_t5_2dd0a444', 'engine_id': 9999, 'cycle': 40, 'action': 'SIGNOFF_APPROVED', 'reviewer_id': 'AME-007', 'predicted_rul': 35.0, 'notes': 'Cleared for test run', 'timestamp': '2026-10-07T06:29:32.939146', 'prev_hash': '48a8b9ee6df36da8944884029560d01aad30f122469917c15dd28916df2a6235', 'row_hash': '4dd9476e3789a514f8fce871188222c213287f2a44f18796a5a903cb33c2c5cc'}
