@@ -46,9 +46,13 @@ export default function App() {
   const [auditLog, setAuditLog] = useState([]);
   const [selectedAlert, setSelectedAlert] = useState(null);
   const [signoffNotes, setSignoffNotes] = useState('');
+  const [reviewerId, setReviewerId] = useState('ENG-AME-101');
   const [selectedEngineId, setSelectedEngineId] = useState(3);
   const [isOfflineDemo, setIsOfflineDemo] = useState(false);
   const [latency, setLatency] = useState(null);
+  const [modelInfo, setModelInfo] = useState(null);
+  const [edgeStats, setEdgeStats] = useState(null);
+  const [auditTrail, setAuditTrail] = useState([]);
   const [pipelineMode, setPipelineMode] = useState('mqtt_pipeline');
   const [isStorageOnline, setIsStorageOnline] = useState(false);
   
@@ -101,10 +105,31 @@ export default function App() {
         setIsStorageOnline(Boolean(healthData.downstream_connected));
         setPipelineMode(healthData.pipeline_mode || (healthData.pipeline_bypass ? 'http_bypass' : 'mqtt_pipeline'));
 
-        if (healthData.metadata && healthData.metadata.mean_cpu_latency_ms) {
-          setLatency(`${healthData.metadata.mean_cpu_latency_ms.toFixed(3)} ms`);
-        } else {
-          setLatency('pending');
+        // 1b. Fetch live model info for p50/p95 latency
+        try {
+          const modelRes = await fetch(`${BACKEND_URL}/model/info`, { signal: AbortSignal.timeout(3000) });
+          if (modelRes.ok) {
+            const mData = await modelRes.json();
+            setModelInfo(mData);
+            if (mData.sample_count > 0 && mData.latency_p50_ms > 0) {
+              setLatency(`p50: ${mData.latency_p50_ms}ms | p95: ${mData.latency_p95_ms}ms`);
+            } else {
+              setLatency('Awaiting calls');
+            }
+          }
+        } catch (e) {
+          console.error("Model info fetch error", e);
+        }
+
+        // 1c. Fetch live edge stats
+        try {
+          const edgeRes = await fetch(`${BACKEND_URL}/edge/stats`, { signal: AbortSignal.timeout(3000) });
+          if (edgeRes.ok) {
+            const eData = await edgeRes.json();
+            setEdgeStats(eData);
+          }
+        } catch (e) {
+          console.error("Edge stats fetch error", e);
         }
 
         if (healthData.downstream_connected === false) {
@@ -126,14 +151,14 @@ export default function App() {
           console.error("Alerts fetch error", e);
         }
 
-        // 3. Fetch all alerts for audit log
+        // 3. Fetch immutable audit trail chain
         try {
-          const auditRes = await fetch(`${BACKEND_URL}/alerts?unresolved_only=false`, { signal: AbortSignal.timeout(3000) });
+          const auditRes = await fetch(`${BACKEND_URL}/audit`, { signal: AbortSignal.timeout(3000) });
           if (auditRes.ok) {
-            const auditData = await auditRes.json();
-            const filteredAudit = auditData.filter(a => a.status !== 'PENDING');
-            setAuditLog(filteredAudit);
-            localStorage.setItem('cached_auditLog', JSON.stringify(filteredAudit));
+            const chainData = await auditRes.json();
+            setAuditTrail(chainData);
+            setAuditLog(chainData);
+            localStorage.setItem('cached_auditLog', JSON.stringify(chainData));
           }
         } catch (e) {
           console.error("Audit log fetch error", e);
@@ -182,20 +207,33 @@ export default function App() {
   const handleSignoff = async (alertId, status) => {
     if (!alertId) return;
     try {
+      const decision = status === 'APPROVED' ? 'approve' : 'reject';
       const res = await fetch(`${BACKEND_URL}/alerts/${alertId}/signoff`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: status, notes: signoffNotes })
+        body: JSON.stringify({ 
+          decision: decision,
+          status: status, 
+          reviewer_id: reviewerId.trim() || 'ENG-AME-101',
+          notes: signoffNotes 
+        })
       });
       if (res.ok) {
         // Clear selection and notes
         setSelectedAlert(null);
         setSignoffNotes('');
-        // Refresh alert lists immediately
+        // Refresh alert lists and audit trail immediately
         const alertsRes = await fetch(`${BACKEND_URL}/alerts?unresolved_only=true`);
         if (alertsRes.ok) setAlerts(await alertsRes.json());
-        const auditRes = await fetch(`${BACKEND_URL}/alerts?unresolved_only=false`);
-        if (auditRes.ok) setAuditLog((await auditRes.json()).filter(a => a.status !== 'PENDING'));
+        const auditRes = await fetch(`${BACKEND_URL}/audit`);
+        if (auditRes.ok) {
+          const chain = await auditRes.json();
+          setAuditTrail(chain);
+          setAuditLog(chain);
+        }
+      } else {
+        const errData = await res.json();
+        alert("Signoff rejected: " + (errData.detail || "Error"));
       }
     } catch (e) {
       alert("Failed to submit signoff: " + e.message);
@@ -518,6 +556,20 @@ export default function App() {
                       </div>
 
                       <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Reviewer / AME License ID</label>
+                          <span className="text-[9px] text-slate-500 font-mono">(Prototype Identity)</span>
+                        </div>
+                        <input 
+                          type="text"
+                          value={reviewerId}
+                          onChange={(e) => setReviewerId(e.target.value)}
+                          placeholder="e.g. ENG-AME-101"
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs focus:border-indigo-500 focus:outline-none text-slate-100 placeholder-slate-600 font-mono"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
                         <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">AME Engineering Notes</label>
                         <textarea 
                           rows={4}
@@ -561,15 +613,18 @@ export default function App() {
                 {/* Audit Log Section - Right under Inspection & Sign-Off Control */}
                 <div className="border border-slate-800 rounded-2xl p-6 bg-slate-900/30 backdrop-blur-md">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-base font-bold text-white flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-slate-400" /> AME Action Audit Log (Resolved Alerts)
-                    </h3>
+                    <div>
+                      <h3 className="text-base font-bold text-white flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-slate-400" /> Immutable AME Action Audit Log
+                      </h3>
+                      <p className="text-[10px] text-slate-500 mt-0.5">Cryptographically chained tamper-evident audit record</p>
+                    </div>
                     <span className="bg-slate-800/80 text-slate-400 text-[10px] px-2 py-0.5 rounded-full font-mono">
-                      {auditLog.length} resolved
+                      {auditTrail.length} audit entries
                     </span>
                   </div>
-                  {auditLog.length === 0 ? (
-                    <p className="text-xs text-slate-500 italic py-4 text-center">No resolved sign-off actions logged in the audit history.</p>
+                  {auditTrail.length === 0 ? (
+                    <p className="text-xs text-slate-500 italic py-4 text-center">No sign-off actions logged in the audit history.</p>
                   ) : (
                     <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-950/60 max-h-72 overflow-y-auto overflow-x-auto">
                       <table className="w-full text-left border-collapse text-xs">
@@ -577,32 +632,36 @@ export default function App() {
                           <tr className="border-b border-slate-800 bg-slate-900/60 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
                             <th className="p-3">Engine</th>
                             <th className="p-3">Cycle</th>
+                            <th className="p-3">Action</th>
+                            <th className="p-3">Reviewer</th>
                             <th className="p-3">RUL</th>
-                            <th className="p-3">Status</th>
                             <th className="p-3">Notes</th>
-                            <th className="p-3">Time</th>
+                            <th className="p-3">Hash</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-800/80">
-                          {auditLog.map(log => (
+                          {auditTrail.map(log => (
                             <tr key={log.id} className="hover:bg-slate-900/40">
                               <td className="p-3 font-bold text-white whitespace-nowrap">#{log.engine_id}</td>
                               <td className="p-3 font-mono">{log.cycle}</td>
-                              <td className="p-3 font-mono">{log.rul_prediction}</td>
                               <td className="p-3">
                                 <span className={`px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap ${
-                                  log.status === 'APPROVED' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                                  log.status === 'REJECTED' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' :
-                                  'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                  (log.action || '').includes('APPROVED') ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                                  (log.action || '').includes('REJECTED') ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' :
+                                  'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
                                 }`}>
-                                  {log.status === 'APPROVED' ? 'ACCEPTED' : log.status}
+                                  {log.action || log.status}
                                 </span>
                               </td>
+                              <td className="p-3 font-mono text-[11px] text-slate-300 whitespace-nowrap">
+                                {log.reviewer_id || 'System'}
+                              </td>
+                              <td className="p-3 font-mono">{log.predicted_rul || log.rul_prediction}</td>
                               <td className="p-3 text-slate-300 max-w-[140px] truncate" title={log.notes}>
                                 {log.notes || '-'}
                               </td>
-                              <td className="p-3 text-slate-400 font-mono text-[10px] whitespace-nowrap">
-                                {new Date(log.signoff_time).toLocaleTimeString()}
+                              <td className="p-3 font-mono text-[9px] text-slate-500 whitespace-nowrap" title={log.row_hash}>
+                                {log.row_hash ? `${log.row_hash.slice(0, 8)}...` : 'genesis'}
                               </td>
                             </tr>
                           ))}
@@ -679,7 +738,7 @@ export default function App() {
               {currentTwin ? (
                 <>
                   {/* KPI Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                     <div className="border border-slate-800 rounded-2xl p-5 bg-slate-900/20">
                       <div className="text-xs text-slate-500 font-semibold uppercase">Operational Cycle</div>
                       <div className="text-3xl font-bold text-white mt-2 font-mono">{currentTwin.cycle}</div>
@@ -706,9 +765,22 @@ export default function App() {
                       <div className="text-[10px] text-slate-400 mt-1">Awaiting AME decision</div>
                     </div>
                     <div className="border border-slate-800 rounded-2xl p-5 bg-slate-900/20">
-                      <div className="text-xs text-slate-500 font-semibold uppercase">CNN Inference Latency</div>
-                      <div className="text-3xl font-bold text-emerald-400 mt-2 font-mono">{latency || '—'}</div>
-                      <div className="text-[10px] text-slate-400 mt-1">Real CPU execution time</div>
+                      <div className="text-xs text-slate-500 font-semibold uppercase">Inference Latency</div>
+                      <div className="text-xl font-bold text-emerald-400 mt-2 font-mono">
+                        {modelInfo && modelInfo.latency_p50_ms ? `p50: ${modelInfo.latency_p50_ms}ms` : (latency || '—')}
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-1">
+                        {modelInfo && modelInfo.latency_p95_ms ? `p95: ${modelInfo.latency_p95_ms}ms (n=${modelInfo.sample_count})` : 'Live measured time'}
+                      </div>
+                    </div>
+                    <div className="border border-slate-800 rounded-2xl p-5 bg-slate-900/20">
+                      <div className="text-xs text-slate-500 font-semibold uppercase">Edge Ingestion</div>
+                      <div className="text-xl font-bold text-cyan-400 mt-2 font-mono">
+                        {edgeStats ? `${(edgeStats.upstream_payload_bytes / 1024).toFixed(1)} KB` : '0 KB'}
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-1">
+                        {edgeStats ? `Ratio: ${edgeStats.payload_to_raw_ratio}x (${edgeStats.total_calls} calls)` : 'Measured payload ratio'}
+                      </div>
                     </div>
                   </div>
 

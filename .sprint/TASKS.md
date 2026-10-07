@@ -13,7 +13,7 @@
 | T9 | Live latency + model info: timing with perf_counter, rolling p50/p95, GET /model/info | VERIFIED | 50 calls p50 <= p95 > 0; file sizes match os.path.getsize; RMSE matches results.json | .sprint/evidence/T9.txt |
 | T10 | Audit endpoints: GET /audit, GET /audit/verify | VERIFIED | tests for GET endpoints, tamper test on a copy | .sprint/evidence/T10.txt |
 | T11 | Edge bytes: record raw_window_bytes and upstream_payload_bytes, GET /edge/stats | VERIFIED | test that totals equal sum of real body lengths over N calls | .sprint/evidence/T11.txt |
-| T12 | Frontend: live latency p50/p95, edge stats, audit log table, reviewer ID in modal, remove static 0.139 | TODO | npm run build passes; grep finds no hardcoded 0.139; dashboard verified | .sprint/evidence/T12.txt |
+| T12 | Frontend: live latency p50/p95, edge stats, audit log table, reviewer ID in modal, remove static 0.139 | VERIFIED | npm run build passes; grep finds no hardcoded 0.139; dashboard verified | .sprint/evidence/T12.txt |
 | T13 | Deployment files: Dockerfiles, docker-compose.prod.yml with Caddy, Caddyfile, deploy/README.md, deploy/smoke_test.sh | TODO | docker compose config valid; shellcheck; smoke_test.sh passes locally | .sprint/evidence/T13.txt |
 | T14 | Tests and claims: pytest covers T1-T11, preprocessing parity check 0.0, CLAIMS.md | TODO | full pytest suite passing, CLAIMS.md written with permitted/forbidden claims | .sprint/evidence/T14.txt |
 | T15 | Final sprint report | TODO | .sprint/REPORT.md complete | .sprint/evidence/T15.txt |
