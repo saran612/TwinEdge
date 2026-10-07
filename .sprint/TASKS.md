@@ -1,19 +1,19 @@
-# Sprint Tasks
+# Frontend Sprint Tasks Matrix
 
-| id | task | status | verification | evidence file |
-|---|---|---|---|---|
-| T1 | Non-destructive init: remove DELETE FROM alerts/telemetry_buffer, idempotent setup | VERIFIED | insert a row, call init_db() again, row persists; grep shows no such DELETE in app code | .sprint/evidence/T1.txt |
-| T2 | Secrets out of source: Influx/MQTT tokens/passwords to .env, add .env.example, fail-fast | VERIFIED | git grep old token returns nothing in tracked files; docker compose config resolves | .sprint/evidence/T2.txt |
-| T3 | Early-cycle padding in POST /predict: pad windows < 30 matching preprocess.py; >30 or bad shape -> 400 | VERIFIED | tests for lengths 1, 10, 29, 30, 31; numeric parity vs preprocess.py = 0.0 diff | .sprint/evidence/T3.txt |
-| T4 | Immutable audit trail: audit_trail table with hash chaining, insert-only | VERIFIED | tests for chain verification true on clean, false on tampered; grep shows no UPDATE/DELETE on audit_trail | .sprint/evidence/T4.txt |
-| T5 | Sign-off contract: POST /alerts/{id}/signoff requires decision & non-empty reviewer_id | VERIFIED | tests for missing reviewer_id, bad decision, double sign-off, valid sign-off | .sprint/evidence/T5.txt |
-| T6 | K-cycle alert gating: insert-only predictions table, alert iff last K stored predictions < THRESHOLD | VERIFIED | tests: single noisy dip -> no alert; K sustained -> 1 alert; recovery/re-dip; out-of-order; idempotent | .sprint/evidence/T6.txt |
-| T7 | Honest simulator: remove synthetic RUL fallback in simulator.py, log error & emit error state | VERIFIED | stop backend, run simulator briefly, confirm errors logged and no synthetic RUL produced | .sprint/evidence/T7.txt |
-| T8 | Remove fake confidence: delete heuristic confidence from backend & UI placeholder tile | VERIFIED | grep finds neither; frontend builds | .sprint/evidence/T8.txt |
-| T9 | Live latency + model info: timing with perf_counter, rolling p50/p95, GET /model/info | VERIFIED | 50 calls p50 <= p95 > 0; file sizes match os.path.getsize; RMSE matches results.json | .sprint/evidence/T9.txt |
-| T10 | Audit endpoints: GET /audit, GET /audit/verify | VERIFIED | tests for GET endpoints, tamper test on a copy | .sprint/evidence/T10.txt |
-| T11 | Edge bytes: record raw_window_bytes and upstream_payload_bytes, GET /edge/stats | VERIFIED | test that totals equal sum of real body lengths over N calls | .sprint/evidence/T11.txt |
-| T12 | Frontend: live latency p50/p95, edge stats, audit log table, reviewer ID in modal, remove static 0.139 | VERIFIED | npm run build passes; grep finds no hardcoded 0.139; dashboard verified | .sprint/evidence/T12.txt |
-| T13 | Deployment files: Dockerfiles, docker-compose.prod.yml with Caddy, Caddyfile, deploy/README.md, deploy/smoke_test.sh | VERIFIED | docker compose config valid; shellcheck; smoke_test.sh passes locally | .sprint/evidence/T13.txt |
-| T14 | Tests and claims: pytest covers T1-T11, preprocessing parity check 0.0, CLAIMS.md | VERIFIED | full pytest suite passing, CLAIMS.md written with permitted/forbidden claims | .sprint/evidence/T14.txt |
-| T15 | Final sprint report | VERIFIED | .sprint/REPORT.md complete | .sprint/evidence/T15.txt |
+| id | task | priority | status | verification | evidence |
+|---|---|---|---|---|---|
+| F0 | Discovery: frontend structure, App.jsx, Turbofan3DView.jsx, 3D assets search + mesh_report.md, backend endpoints, hardening state | P0 | VERIFIED | Output .sprint/frontend/discovery.md and .sprint/frontend/mesh_report.md | .sprint/evidence/F0.txt |
+| F1 | Foundation: router, shell, tokens, store/state, API client with explicit errors, shared components, provenance/status/metric, Rubrics drawer | P0 | TODO | Component test/render, clean build, Rubrics drawer verified | .sprint/evidence/F1.txt |
+| F2 | Offline assets exporter + ORT-web engine + preprocessing in JS + parity tests | P0 | TODO | max abs diff < 1e-3 cycles on >=200 windows verified in Vitest | .sprint/evidence/F2.txt |
+| F3 | Replay controller + data-source switch (Live / Replay / Simulation) + held-out/test engine handling and badges | P0 | TODO | Source switch behaves correctly, engine split badges display | .sprint/evidence/F3.txt |
+| F4 | Digital Twin page: 3D load, mapping, selection, panels, EOL data, counterfactual impact, color modes | P0 | TODO | 3D canvas renders, components select, counterfactual impact computed | .sprint/evidence/F4.txt |
+| F5 | Simulation Lab: matrix editor, presets, run, results, sensitivity heatmap, OOD flags, save/compare/export | P0 | TODO | Browser-side ORT-web runs offline without backend, matrix modifies inputs, heatmap renders | .sprint/evidence/F5.txt |
+| F6 | Alerts & Sign-off page: filters, detail drawer, K-gate evidence, reviewer ID, Approve/Reject contract, prototype disclaimer | P1 | TODO | Live signoff contract verified, disabled in Replay/Simulation | .sprint/evidence/F6.txt |
+| F7 | Audit page: immutable chain table, verify chain endpoint, row/prev hash inspection, CSV/JSON export | P1 | TODO | Chain verified via API, hash copies work | .sprint/evidence/F7.txt |
+| F8 | Edge & Model page: model info, live/browser latency, edge bytes ratio, browser benchmark | P1 | TODO | Real measurements display, benchmark runs 100 iterations | .sprint/evidence/F8.txt |
+| F9 | Overview page: fleet engine table, status bands, mini charts, navigation quick actions | P1 | TODO | Fleet table loads, row click switches engine, health gauges update | .sprint/evidence/F9.txt |
+| F10 | Telemetry page: 14 small multiples, cycle brush, RUL pred vs true, error analysis, CSV export | P2 | TODO | Small multiples render, cycle range selection works | .sprint/evidence/F10.txt |
+| F11 | Method & Limits page: scope, C-MAPSS data details, 1D-CNN architecture, rubrics, limitations, CLAIMS.md viewer | P2 | TODO | Claims render, no forbidden claims present | .sprint/evidence/F11.txt |
+| F12 | Accessibility & performance pass: focus order, keyboard 3D selection, contrast, bundle optimization, 60fps check | P2 | TODO | Lighthouse / a11y checks, keyboard navigation functional | .sprint/evidence/F12.txt |
+| F13 | Automated tests: Vitest (parity, K-gate, perturbation, OOD, impact, EOL), Playwright E2E, screenshots | P1 | TODO | Vitest passing, Playwright / offline E2E passing | .sprint/evidence/F13.txt |
+| F14 | CLAIMS.md update, .sprint/REPORT.md final report with screenshots and measurements | P0 | TODO | Final report and claims verified | .sprint/evidence/F14.txt |
