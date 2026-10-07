@@ -12,7 +12,7 @@ from datetime import datetime
 import sqlite3
 from influxdb_client import InfluxDBClient
 
-from app.db import get_unresolved_alerts, get_all_alerts, signoff_alert, add_alert, DB_PATH
+from app.db import get_unresolved_alerts, get_all_alerts, signoff_alert, add_alert, get_audit_trail, verify_audit_trail, DB_PATH
 
 app = FastAPI(title="TwinEdge Backend")
 
@@ -330,18 +330,64 @@ def get_alerts(unresolved_only: bool = True):
     return get_all_alerts()
 
 # H3. POST /alerts/{id}/signoff - AME decision recording
+# NOTE (Prototype Identity): This records reviewer identity for prototyping and audit accountability,
+# not full cryptographic license certificate verification.
 class SignoffRequest(BaseModel):
-    status: str # APPROVED, REJECTED, ESCALATED
+    decision: Optional[str] = None # approve | reject
+    status: Optional[str] = None # backward compatibility for APPROVED | REJECTED
+    reviewer_id: str
     notes: Optional[str] = ""
 
 @app.post("/alerts/{alert_id}/signoff")
 def post_signoff(alert_id: str, request: SignoffRequest):
-    valid_statuses = ["APPROVED", "REJECTED", "ESCALATED"]
-    if request.status not in valid_statuses:
-        raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of {valid_statuses}")
+    """
+    Records an engineer sign-off decision on an active alert.
+    Requires decision ('approve' or 'reject') and a non-empty reviewer_id.
+    Note: Prototype identity only; does not perform cryptographic license signature check.
+    """
+    if not request.reviewer_id or not request.reviewer_id.strip():
+        raise HTTPException(status_code=422, detail="reviewer_id is required and cannot be empty")
         
+    decision = request.decision or (request.status.lower() if request.status else "")
+    if decision not in ["approve", "reject", "approved", "rejected"]:
+        raise HTTPException(status_code=400, detail="Invalid decision. Must be 'approve' or 'reject'.")
+
+    normalized_status = "APPROVED" if decision in ["approve", "approved"] else "REJECTED"
+
+    # Check alert state to prevent double signoff
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
+    c.execute("SELECT status FROM alerts WHERE id = ?", (alert_id,))
+    row = c.fetchone()
+    conn.close()
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Alert {alert_id} not found")
+    if row["status"] in ["APPROVED", "REJECTED"]:
+        raise HTTPException(status_code=409, detail=f"Alert {alert_id} has already been signed off with status {row['status']}")
+
     try:
-        signoff_alert(alert_id, request.status, request.notes)
-        return {"status": "success", "message": f"Alert {alert_id} signed off as {request.status}"}
+        signoff_alert(alert_id, normalized_status, request.reviewer_id.strip(), request.notes)
+        return {
+            "status": "success", 
+            "decision": normalized_status.lower(),
+            "reviewer_id": request.reviewer_id.strip(),
+            "message": f"Alert {alert_id} signed off as {normalized_status}"
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+# H4. GET /audit - full immutable audit trail chain
+@app.get("/audit")
+def get_audit():
+    return get_audit_trail()
+
+# H5. GET /audit/verify - cryptographic verification of hash chain
+@app.get("/audit/verify")
+def get_audit_verify():
+    ok, bad_row, message = verify_audit_trail()
+    return {
+        "ok": ok,
+        "first_bad_row": bad_row,
+        "message": message
+    }
