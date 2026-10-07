@@ -16,4 +16,4 @@
 | F11 | Method & Limits page: scope, C-MAPSS data details, 1D-CNN architecture, rubrics, limitations, CLAIMS.md viewer | P2 | VERIFIED | Claims render, no forbidden claims present | .sprint/evidence/F11.txt |
 | F12 | Accessibility & performance pass: focus order, keyboard 3D selection, contrast, bundle optimization, 60fps check | P2 | VERIFIED | Lighthouse / a11y checks, keyboard navigation functional | .sprint/evidence/F12.txt |
 | F13 | Automated tests: Vitest (parity, K-gate, perturbation, OOD, impact, EOL), Playwright E2E, screenshots | P1 | VERIFIED | Vitest passing, Playwright / offline E2E passing | .sprint/evidence/F13.txt |
-| F14 | CLAIMS.md update, .sprint/REPORT.md final report with screenshots and measurements | P0 | TODO | Final report and claims verified | .sprint/evidence/F14.txt |
+| F14 | CLAIMS.md update, .sprint/REPORT.md final report with screenshots and measurements | P0 | VERIFIED | Final report and claims verified | .sprint/evidence/F14.txt |
