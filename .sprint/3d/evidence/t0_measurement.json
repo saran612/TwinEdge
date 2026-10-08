@@ -1,0 +1,377 @@
+{
+  "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+  "gpuVendor": "Google Inc. (Google)",
+  "info": {
+    "memory": {
+      "geometries": 10,
+      "textures": 1
+    },
+    "render": {
+      "frame": 4,
+      "calls": 10,
+      "triangles": 4320,
+      "points": 0,
+      "lines": 42
+    },
+    "programs": 2
+  },
+  "cam": {
+    "near": 0.1,
+    "far": 100,
+    "fov": 45,
+    "position": [
+      3.999999999999999,
+      2.500000000000001,
+      4
+    ]
+  },
+  "totalNodes": 5392,
+  "meshCount": 1625,
+  "materialsSample": [
+    {
+      "name": "",
+      "type": "MeshStandardMaterial",
+      "metalness": 0,
+      "roughness": 0.2,
+      "transparent": false,
+      "opacity": 1,
+      "depthWrite": true,
+      "depthTest": true
+    },
+    {
+      "name": "",
+      "type": "MeshStandardMaterial",
+      "metalness": 0,
+      "roughness": 0.2,
+      "transparent": false,
+      "opacity": 1,
+      "depthWrite": true,
+      "depthTest": true
+    },
+    {
+      "name": "",
+      "type": "MeshStandardMaterial",
+      "metalness": 0,
+      "roughness": 0.2,
+      "transparent": false,
+      "opacity": 1,
+      "depthWrite": true,
+      "depthTest": true
+    },
+    {
+      "name": "",
+      "type": "MeshStandardMaterial",
+      "metalness": 0,
+      "roughness": 0.2,
+      "transparent": false,
+      "opacity": 1,
+      "depthWrite": true,
+      "depthTest": true
+    },
+    {
+      "name": "",
+      "type": "MeshStandardMaterial",
+      "metalness": 0,
+      "roughness": 0.2,
+      "transparent": false,
+      "opacity": 1,
+      "depthWrite": true,
+      "depthTest": true
+    },
+    {
+      "name": "",
+      "type": "MeshStandardMaterial",
+      "metalness": 0,
+      "roughness": 0.2,
+      "transparent": false,
+      "opacity": 1,
+      "depthWrite": true,
+      "depthTest": true
+    },
+    {
+      "name": "",
+      "type": "MeshStandardMaterial",
+      "metalness": 0,
+      "roughness": 0.2,
+      "transparent": false,
+      "opacity": 1,
+      "depthWrite": true,
+      "depthTest": true
+    },
+    {
+      "name": "",
+      "type": "MeshStandardMaterial",
+      "metalness": 0,
+      "roughness": 0.2,
+      "transparent": false,
+      "opacity": 1,
+      "depthWrite": true,
+      "depthTest": true
+    },
+    {
+      "name": "",
+      "type": "MeshStandardMaterial",
+      "metalness": 0,
+      "roughness": 0.2,
+      "transparent": false,
+      "opacity": 1,
+      "depthWrite": true,
+      "depthTest": true
+    },
+    {
+      "name": "Steel",
+      "type": "MeshPhysicalMaterial",
+      "metalness": 0.85,
+      "roughness": 1,
+      "transparent": false,
+      "opacity": 1,
+      "depthWrite": true,
+      "depthTest": true
+    }
+  ],
+  "anchors": [
+    {
+      "name": "Fan & Bypass Duct",
+      "componentId": "fan",
+      "position": [
+        -1.8,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Low Pressure Compressor (LPC)",
+      "componentId": "lpc",
+      "position": [
+        -1.1,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "High Pressure Compressor (HPC)",
+      "componentId": "hpc",
+      "position": [
+        -0.3,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Combustor",
+      "componentId": "combustor",
+      "position": [
+        0.4,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "High Pressure Turbine (HPT)",
+      "componentId": "hpt",
+      "position": [
+        0.9,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Low Pressure Turbine (LPT)",
+      "componentId": "lpt",
+      "position": [
+        1.5,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Core Exhaust Nozzle",
+      "componentId": "nozzle",
+      "position": [
+        2.2,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "High Pressure Spool & Shaft",
+      "componentId": "hp_spool",
+      "position": [
+        0.3,
+        -0.4,
+        0
+      ]
+    },
+    {
+      "name": "Low Pressure Spool & Shaft",
+      "componentId": "lp_spool",
+      "position": [
+        0.1,
+        -0.6,
+        0
+      ]
+    },
+    {
+      "name": "Fan & Bypass Duct",
+      "componentId": "fan",
+      "position": [
+        -1.8,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Low Pressure Compressor (LPC)",
+      "componentId": "lpc",
+      "position": [
+        -1.1,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "High Pressure Compressor (HPC)",
+      "componentId": "hpc",
+      "position": [
+        -0.3,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Combustor",
+      "componentId": "combustor",
+      "position": [
+        0.4,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "High Pressure Turbine (HPT)",
+      "componentId": "hpt",
+      "position": [
+        0.9,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Low Pressure Turbine (LPT)",
+      "componentId": "lpt",
+      "position": [
+        1.5,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Core Exhaust Nozzle",
+      "componentId": "nozzle",
+      "position": [
+        2.2,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "High Pressure Spool & Shaft",
+      "componentId": "hp_spool",
+      "position": [
+        0.3,
+        -0.4,
+        0
+      ]
+    },
+    {
+      "name": "Low Pressure Spool & Shaft",
+      "componentId": "lp_spool",
+      "position": [
+        0.1,
+        -0.6,
+        0
+      ]
+    },
+    {
+      "name": "Fan & Bypass Duct",
+      "componentId": "fan",
+      "position": [
+        -1.8,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Low Pressure Compressor (LPC)",
+      "componentId": "lpc",
+      "position": [
+        -1.1,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "High Pressure Compressor (HPC)",
+      "componentId": "hpc",
+      "position": [
+        -0.3,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Combustor",
+      "componentId": "combustor",
+      "position": [
+        0.4,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "High Pressure Turbine (HPT)",
+      "componentId": "hpt",
+      "position": [
+        0.9,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Low Pressure Turbine (LPT)",
+      "componentId": "lpt",
+      "position": [
+        1.5,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Core Exhaust Nozzle",
+      "componentId": "nozzle",
+      "position": [
+        2.2,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "High Pressure Spool & Shaft",
+      "componentId": "hp_spool",
+      "position": [
+        0.3,
+        -0.4,
+        0
+      ]
+    },
+    {
+      "name": "Low Pressure Spool & Shaft",
+      "componentId": "lp_spool",
+      "position": [
+        0.1,
+        -0.6,
+        0
+      ]
+    }
+  ]
+}
