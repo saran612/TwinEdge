@@ -225,18 +225,18 @@ export default function GlobalShell({ activePage, onNavigate, children }) {
                 <button
                   key={page.id}
                   onClick={() => onNavigate(page.id)}
-                  className={`w-full h-11 flex items-center justify-between px-3.5 rounded-md text-sm transition-colors cursor-pointer select-none ${
+                  className={`w-full h-11 flex items-center justify-between px-3 rounded-md text-sm transition-colors cursor-pointer select-none whitespace-nowrap ${
                     isActive
                       ? 'bg-selected-row text-accent font-semibold border-l-[3px] border-l-accent'
-                      : 'text-text-2 hover:text-text-main hover:bg-surface-2'
+                      : 'text-text-2 hover:text-text hover:bg-surface-2'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <Icon className={`w-4 h-4 ${isActive ? 'text-accent' : 'text-text-muted'}`} />
-                    <span>{page.label}</span>
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-accent' : 'text-text-muted'}`} />
+                    <span className="truncate whitespace-nowrap text-sm">{page.label}</span>
                   </div>
                   {page.badge && pendingAlertCount > 0 && (
-                    <span className="px-2 py-0.5 rounded-full bg-status-critical-bg text-status-critical-text border border-status-critical-border text-xs font-semibold tabular-nums">
+                    <span className="shrink-0 ml-2 px-1.5 py-0.5 rounded-full bg-status-critical-bg text-status-critical-text border border-status-critical-border text-xs font-semibold tabular-nums">
                       {pendingAlertCount}
                     </span>
                   )}
