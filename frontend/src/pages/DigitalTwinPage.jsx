@@ -35,6 +35,7 @@ export default function DigitalTwinPage({ onNavigateToAlerts, onNavigateToSim })
     setPlaybackSpeed,
     replayController,
     dataSource,
+    setDataSource,
   } = useApp();
 
   const [activeTab, setActiveTab] = useState('component'); // 'component' | 'engine' | 'sensors'
@@ -105,10 +106,18 @@ export default function DigitalTwinPage({ onNavigateToAlerts, onNavigateToSim })
     rank: 1,
   };
 
-  // Keyboard navigation for components
+  // Keyboard navigation for components & space bar for playback (T4)
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
+      // Ignore if user is inside an input, select, or textarea
+      if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target?.tagName)) return;
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        if (dataSource !== 'Live') {
+          setIsPlaying((prev) => !prev);
+        }
+      } else if (e.key === 'Escape') {
         setSelectedComponentId(null);
       } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
         const idx = componentMapData.components.findIndex((c) => c.id === selectedComponentId);
@@ -122,7 +131,7 @@ export default function DigitalTwinPage({ onNavigateToAlerts, onNavigateToSim })
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedComponentId]);
+  }, [selectedComponentId, dataSource, setIsPlaying]);
 
   return (
     <div className="flex flex-col h-full gap-4 select-none">
@@ -186,24 +195,40 @@ export default function DigitalTwinPage({ onNavigateToAlerts, onNavigateToSim })
                   )}
                 </div>
 
-                {/* Model-attributed impact card */}
+                {/* Model-attributed impact card per T5 */}
                 <div className="p-4 rounded-md bg-surface-2 border border-border space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-text-main font-semibold flex items-center gap-1.5">
                       Model-attributed impact (Counterfactual)
-                      <span className="text-xs text-text-muted font-normal">(Rank #{selectedAttr.rank || 1})</span>
+                      {engineMetrics.rul < HEALTH_CONFIG.RUL_CAP && Math.abs(selectedAttr?.deltaRul || 0) >= 0.5 && (
+                        <span className="text-xs text-text-muted font-normal">(Rank #{selectedAttr.rank || 1})</span>
+                      )}
                     </span>
                     <ProvenanceTag type="MODEL" />
                   </div>
-                  <div className="flex items-baseline gap-2">
-                    <span className={`text-xl font-mono font-bold ${selectedAttr.deltaRul > 0 ? 'text-status-degrading-text' : 'text-text-main'}`}>
-                      {selectedAttr.deltaRul > 0 ? `+${selectedAttr.deltaRul}` : selectedAttr.deltaRul}
-                    </span>
-                    <span className="text-xs text-text-2">cycles RUL delta</span>
-                  </div>
-                  <p className="text-xs text-text-muted leading-relaxed">
-                    Counterfactual attribution: difference between predicted RUL if this component's sensors were restored to healthy baseline vs current input.
-                  </p>
+
+                  {engineMetrics.rul >= HEALTH_CONFIG.RUL_CAP || Math.abs(selectedAttr?.deltaRul || 0) < 0.5 ? (
+                    <div className="py-1">
+                      <div className="text-sm font-semibold text-text-muted">
+                        No measurable impact: predicted RUL is at the cap
+                      </div>
+                      <p className="text-xs text-text-muted mt-1 leading-relaxed">
+                        Sensor perturbation indicates all components currently operate within nominal healthy baseline limits.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-baseline gap-2">
+                        <span className={`text-xl font-mono font-bold ${selectedAttr.deltaRul > 0 ? 'text-status-degrading-text' : 'text-text-main'}`}>
+                          {selectedAttr.deltaRul > 0 ? `+${selectedAttr.deltaRul.toFixed(1)}` : selectedAttr.deltaRul.toFixed(1)}
+                        </span>
+                        <span className="text-xs text-text-2">cycles RUL delta</span>
+                      </div>
+                      <p className="text-xs text-text-muted leading-relaxed">
+                        Counterfactual attribution: difference between predicted RUL if this component's sensors were restored to healthy baseline vs current input.
+                      </p>
+                    </>
+                  )}
                 </div>
 
                 {/* Engine-level EOL block */}
@@ -310,39 +335,69 @@ export default function DigitalTwinPage({ onNavigateToAlerts, onNavigateToSim })
       {/* Bottom Timeline Scrubber (Height 64px) */}
       <div className="h-16 bg-surface border border-border rounded-lg px-5 py-2 flex items-center justify-between gap-6 shadow-xs">
         <div className="flex items-center gap-3">
-          <IconButton
-            variant="primary"
-            size="sm"
-            onClick={() => setIsPlaying(!isPlaying)}
-            ariaLabel={isPlaying ? 'Pause replay' : 'Play replay'}
-          >
-            {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-          </IconButton>
-          <IconButton
-            variant="secondary"
-            size="sm"
-            onClick={() => setCurrentCycle(30)}
-            ariaLabel="Reset to cycle 30"
-            title="Reset to nominal window (cycle 30)"
-          >
-            <RotateCcw className="w-4 h-4" />
-          </IconButton>
-          <div className="flex items-center gap-1.5 bg-surface-2 border border-border rounded-md px-2.5 py-1 text-xs font-mono">
-            <span className="text-text-muted">Speed:</span>
-            {[1, 2, 4].map((spd) => (
-              <button
-                key={spd}
-                onClick={() => setPlaybackSpeed(spd)}
-                className={`px-1.5 py-0.5 rounded-sm transition-colors cursor-pointer ${
-                  playbackSpeed === spd
-                    ? 'bg-accent text-on-accent font-bold'
-                    : 'text-text-2 hover:text-text-main'
-                }`}
+          {dataSource === 'Live' ? (
+            <div className="flex items-center gap-2">
+              <IconButton
+                variant="secondary"
+                size="md"
+                disabled={true}
+                title="Playback applies to Replay and Simulation"
+                ariaLabel="Playback disabled in Live mode"
               >
-                {spd}x
-              </button>
-            ))}
-          </div>
+                <Play className="w-5 h-5 text-text-muted" />
+              </IconButton>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setDataSource('Replay')}
+                title="Switch active data source to Replay to enable time travel playback"
+                className="text-xs"
+              >
+                Switch to Replay
+              </Button>
+            </div>
+          ) : (
+            <>
+              <IconButton
+                variant="primary"
+                size="md"
+                onClick={() => setIsPlaying(!isPlaying)}
+                ariaLabel={isPlaying ? 'Pause replay' : 'Play replay'}
+                aria-pressed={isPlaying}
+                title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}
+              >
+                {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+              </IconButton>
+              <IconButton
+                variant="secondary"
+                size="md"
+                onClick={() => {
+                  setIsPlaying(false);
+                  setCurrentCycle(30);
+                }}
+                ariaLabel="Reset to cycle 30"
+                title="Reset to nominal window (cycle 30)"
+              >
+                <RotateCcw className="w-5 h-5" />
+              </IconButton>
+              <div className="flex items-center gap-1.5 bg-surface-2 border border-border rounded-md px-2.5 py-1 text-xs font-mono">
+                <span className="text-text-muted">Speed:</span>
+                {[0.5, 1, 2, 4, 8].map((spd) => (
+                  <button
+                    key={spd}
+                    onClick={() => setPlaybackSpeed(spd)}
+                    className={`px-1.5 py-0.5 rounded-sm transition-colors cursor-pointer ${
+                      playbackSpeed === spd
+                        ? 'bg-accent text-on-accent font-bold'
+                        : 'text-text-2 hover:text-text'
+                    }`}
+                  >
+                    {spd}x
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
         {/* Scrubber Slider */}

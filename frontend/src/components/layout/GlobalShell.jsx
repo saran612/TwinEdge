@@ -138,11 +138,15 @@ export default function GlobalShell({ activePage, onNavigate, children }) {
                 }}
                 className="h-8 text-xs font-mono"
               >
-                {(availableEngines || []).map((eng) => (
-                  <option key={eng.key} value={eng.key}>
-                    {eng.displayLabel} ({eng.split === 'HELD-OUT VALIDATION' ? 'VAL' : 'TEST'})
-                  </option>
-                ))}
+                {dataSource === DATA_SOURCES.LIVE ? (
+                  <option value="LIVE-001">LIVE-001 (MQTT Telemetry Stream)</option>
+                ) : (
+                  (availableEngines || []).map((eng) => (
+                    <option key={eng.key} value={eng.key}>
+                      {eng.displayLabel} ({eng.split === 'HELD-OUT VALIDATION' ? 'VAL' : 'TEST'})
+                    </option>
+                  ))
+                )}
               </Select>
             </div>
           </div>
@@ -190,13 +194,13 @@ export default function GlobalShell({ activePage, onNavigate, children }) {
             onClick={toggleTheme}
             ariaLabel={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
             variant="secondary"
-            size="sm"
+            size="md"
             title={`Current theme: ${theme}. Click to switch.`}
           >
             {theme === 'dark' ? (
-              <Sun className="w-4 h-4 text-status-degrading-text" />
+              <Sun className="w-5 h-5 text-status-degrading-text" />
             ) : (
-              <Moon className="w-4 h-4 text-accent" />
+              <Moon className="w-5 h-5 text-accent" />
             )}
           </IconButton>
 

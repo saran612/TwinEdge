@@ -89,6 +89,51 @@ export function AppProvider({ children }) {
     }
   };
 
+  // Playback delta accumulation engine (T4)
+  // State machine: isPlaying, playbackSpeed (0.5x, 1x, 2x, 4x, 8x), clamps at last cycle
+  useEffect(() => {
+    if (!isPlaying) return;
+    if (dataSource === DATA_SOURCES.LIVE) {
+      setIsPlaying(false);
+      return;
+    }
+
+    const currentEng = replayController.getCycleData(activeEngineKey || activeEngineId, currentCycle);
+    const maxCycle = currentEng?.totalCycles || 192;
+
+    let lastTime = performance.now();
+    let accumulatedMs = 0;
+    let animId;
+
+    const tick = (now) => {
+      const delta = now - lastTime;
+      lastTime = now;
+      accumulatedMs += delta;
+
+      // Base cycle step time: 1000ms / playbackSpeed (1 cycle per second at 1x)
+      const stepMs = 1000 / (playbackSpeed || 1);
+
+      if (accumulatedMs >= stepMs) {
+        const stepsToAdvance = Math.floor(accumulatedMs / stepMs);
+        accumulatedMs %= stepMs;
+
+        setCurrentCycle((prev) => {
+          const next = prev + stepsToAdvance;
+          if (next >= maxCycle) {
+            setIsPlaying(false); // Playback reached end
+            return maxCycle;
+          }
+          return next;
+        });
+      }
+
+      animId = requestAnimationFrame(tick);
+    };
+
+    animId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(animId);
+  }, [isPlaying, playbackSpeed, dataSource, activeEngineKey, activeEngineId]);
+
   useEffect(() => {
     checkConnectivity();
     const timer = setInterval(checkConnectivity, 15000);
