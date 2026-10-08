@@ -1,0 +1,86 @@
+{
+  "environment": {
+    "hardware_label": "Host-Linux-x86_64-8core",
+    "platform": "Linux-7.0.0-31-generic-x86_64-with-glibc2.43",
+    "processor": "",
+    "cpu_count": 8,
+    "python_version": "3.11.16",
+    "timestamp": "2026-10-08T08:43:28Z"
+  },
+  "model_complexity": {
+    "parameter_count": 16805,
+    "macs": 378560,
+    "flops": 757120,
+    "onnx_size_bytes": 71355,
+    "tflite_size_bytes": 24408,
+    "peak_rss_mb": 663.75
+  },
+  "onnx_benchmark_default_threads": {
+    "load_time_ms": 13.05,
+    "batches": {
+      "batch_1": {
+        "batch_size": 1,
+        "latency_p50_ms": 0.042,
+        "latency_p95_ms": 0.0817,
+        "latency_p99_ms": 0.094,
+        "latency_mean_ms": 0.0552,
+        "throughput_samples_per_sec": 18125.46
+      },
+      "batch_8": {
+        "batch_size": 8,
+        "latency_p50_ms": 0.1054,
+        "latency_p95_ms": 0.1547,
+        "latency_p99_ms": 0.1659,
+        "latency_mean_ms": 0.1116,
+        "throughput_samples_per_sec": 71691.47
+      },
+      "batch_32": {
+        "batch_size": 32,
+        "latency_p50_ms": 0.3326,
+        "latency_p95_ms": 0.3974,
+        "latency_p99_ms": 0.493,
+        "latency_mean_ms": 0.3413,
+        "throughput_samples_per_sec": 93762.92
+      },
+      "batch_128": {
+        "batch_size": 128,
+        "latency_p50_ms": 1.0489,
+        "latency_p95_ms": 1.8227,
+        "latency_p99_ms": 2.3072,
+        "latency_mean_ms": 1.1772,
+        "throughput_samples_per_sec": 108729.73
+      }
+    }
+  },
+  "onnx_benchmark_single_thread": {
+    "load_time_ms": 1.75,
+    "batches": {
+      "batch_1": {
+        "batch_size": 1,
+        "latency_p50_ms": 0.0273,
+        "latency_p95_ms": 0.0588,
+        "latency_p99_ms": 0.0758,
+        "latency_mean_ms": 0.0354,
+        "throughput_samples_per_sec": 28220.2
+      },
+      "batch_8": {
+        "batch_size": 8,
+        "latency_p50_ms": 0.1085,
+        "latency_p95_ms": 0.1261,
+        "latency_p99_ms": 0.1702,
+        "latency_mean_ms": 0.1112,
+        "throughput_samples_per_sec": 71918.17
+      }
+    }
+  },
+  "tflite_benchmark": {
+    "load_time_ms": 37.7,
+    "batch_1": {
+      "latency_p50_ms": 0.0119,
+      "latency_p95_ms": 0.0214,
+      "latency_p99_ms": 0.034,
+      "latency_mean_ms": 0.0131,
+      "throughput_samples_per_sec": 76437.38
+    }
+  }
+}
