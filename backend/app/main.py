@@ -36,19 +36,36 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Paths
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-MODEL_PATH = os.path.join(BASE_DIR, "model", "twinedge_rul.onnx")
-TFLITE_PATH = os.path.join(BASE_DIR, "model", "twinedge_rul.tflite")
-SCALER_PATH = os.path.join(BASE_DIR, "data", "processed", "scaler.joblib")
-RESULTS_PATH = os.path.join(BASE_DIR, "model", "results.json")
-FEATURES_PATH = os.path.join(BASE_DIR, "data", "processed", "active_features.txt")
+# Root and Config Paths wiring
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
+
+try:
+    from config import paths
+    MODEL_PATH = str(paths.ONNX_MODEL_PATH)
+    TFLITE_PATH = str(paths.TFLITE_MODEL_PATH)
+    SCALER_PATH = str(paths.SCALER_PATH)
+    RESULTS_PATH = str(paths.RESULTS_PATH)
+    FEATURES_PATH = str(paths.FEATURES_PATH)
+    REGISTRY_PATH = str(paths.REGISTRY_PATH)
+    GOLDEN_FIXTURES_PATH = str(paths.GOLDEN_FIXTURES_PATH)
+except Exception:
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    MODEL_PATH = os.path.join(BASE_DIR, "model", "twinedge_rul.onnx")
+    TFLITE_PATH = os.path.join(BASE_DIR, "model", "twinedge_rul.tflite")
+    SCALER_PATH = os.path.join(BASE_DIR, "data", "processed", "scaler.joblib")
+    RESULTS_PATH = os.path.join(BASE_DIR, "model", "results.json")
+    FEATURES_PATH = os.path.join(BASE_DIR, "data", "processed", "active_features.txt")
+    REGISTRY_PATH = os.path.join(ROOT_DIR, "models", "registry.json")
+    GOLDEN_FIXTURES_PATH = os.path.join(ROOT_DIR, "models", "golden", "golden_fixtures.json")
 
 # Global variables loaded at startup
 ort_session = None
 scaler = None
 influx_client = None
 metadata = {}
+registry_data = {}
 
 # Metrics & telemetry tracking state
 latency_history = collections.deque(maxlen=500)
@@ -58,29 +75,98 @@ edge_stats_state = {
     "upstream_payload_bytes": 0     # actual serialized body bytes sent/received
 }
 
+def _compute_sha256(filepath: str) -> str:
+    import hashlib
+    h = hashlib.sha256()
+    with open(filepath, "rb") as f:
+        while chunk := f.read(65536):
+            h.update(chunk)
+    return h.hexdigest()
+
 @app.on_event("startup")
 def startup_event():
-    global ort_session, scaler, influx_client, metadata
+    global ort_session, scaler, influx_client, metadata, registry_data
     
-    # Load ONNX model
-    if os.path.exists(MODEL_PATH):
-        try:
-            ort_session = ort.InferenceSession(MODEL_PATH, providers=["CPUExecutionProvider"])
-            print(f"Loaded ONNX model successfully from {MODEL_PATH}")
-        except Exception as e:
-            print(f"Error loading ONNX model: {e}")
-    else:
-        print(f"Warning: ONNX model not found at {MODEL_PATH}")
+    # 1. Verify existence of required model and pipeline files
+    for req_name, req_path in [("ONNX Model", MODEL_PATH), ("Scaler", SCALER_PATH), ("Features list", FEATURES_PATH)]:
+        if not os.path.exists(req_path):
+            raise RuntimeError(f"STARTUP SELF-CHECK FAILED: {req_name} does not exist at '{req_path}'")
 
-    # Load Scaler
-    if os.path.exists(SCALER_PATH):
+    # 2. Verify SHA-256 against registry if registry exists
+    if os.path.exists(REGISTRY_PATH):
         try:
-            scaler = joblib.load(SCALER_PATH)
-            print(f"Loaded StandardScaler successfully from {SCALER_PATH}")
+            with open(REGISTRY_PATH, "r") as f:
+                registry_data = json.load(f)
+            onnx_expected_hash = registry_data.get("artifacts", {}).get("onnx", {}).get("sha256")
+            if onnx_expected_hash:
+                actual_onnx_hash = _compute_sha256(MODEL_PATH)
+                if actual_onnx_hash != onnx_expected_hash:
+                    raise RuntimeError(
+                        f"STARTUP SELF-CHECK FAILED: ONNX model SHA256 mismatch! "
+                        f"Expected {onnx_expected_hash}, got {actual_onnx_hash}"
+                    )
+            scaler_expected_hash = registry_data.get("artifacts", {}).get("scaler", {}).get("sha256")
+            if scaler_expected_hash:
+                actual_scaler_hash = _compute_sha256(SCALER_PATH)
+                if actual_scaler_hash != scaler_expected_hash:
+                    raise RuntimeError(
+                        f"STARTUP SELF-CHECK FAILED: Scaler SHA256 mismatch! "
+                        f"Expected {scaler_expected_hash}, got {actual_scaler_hash}"
+                    )
         except Exception as e:
-            print(f"Error loading scaler: {e}")
-    else:
-        print(f"Warning: Scaler not found at {SCALER_PATH}")
+            if isinstance(e, RuntimeError):
+                raise
+            print(f"Warning reading registry: {e}")
+
+    # 3. Load ONNX Model & Verify I/O Signature
+    try:
+        ort_session = ort.InferenceSession(MODEL_PATH, providers=["CPUExecutionProvider"])
+        print(f"Loaded ONNX model successfully from {MODEL_PATH}")
+    except Exception as e:
+        raise RuntimeError(f"STARTUP SELF-CHECK FAILED: Could not initialize ONNX runtime session: {e}")
+
+    # Check input signature [batch, 30, 14]
+    input_info = ort_session.get_inputs()[0]
+    input_shape = input_info.shape
+    if len(input_shape) != 3 or input_shape[1] != 30 or input_shape[2] != 14:
+        raise RuntimeError(
+            f"STARTUP SELF-CHECK FAILED: Invalid ONNX input shape {input_shape}. "
+            f"Expected [batch, 30, 14]."
+        )
+    # Check output signature [batch, 1]
+    output_info = ort_session.get_outputs()[0]
+    output_shape = output_info.shape
+    if len(output_shape) != 2 or output_shape[1] != 1:
+        raise RuntimeError(
+            f"STARTUP SELF-CHECK FAILED: Invalid ONNX output shape {output_shape}. "
+            f"Expected [batch, 1]."
+        )
+
+    # 4. Canary verification: golden window -> expected RUL within 1e-3
+    canary_tested = False
+    if registry_data and "canary" in registry_data:
+        canary = registry_data["canary"]
+        canary_window = np.array([canary["window"]], dtype=np.float32) # [1, 30, 14]
+        expected_rul = float(canary["expected_rul"])
+        tolerance = float(canary.get("tolerance", 1e-3))
+        
+        input_name = ort_session.get_inputs()[0].name
+        raw_pred = ort_session.run(None, {input_name: canary_window})[0][0][0]
+        abs_diff = abs(float(raw_pred) - expected_rul)
+        if abs_diff > tolerance:
+            raise RuntimeError(
+                f"STARTUP SELF-CHECK FAILED: Canary validation failed! "
+                f"Predicted RUL {raw_pred:.6f} vs Expected {expected_rul:.6f} (diff {abs_diff:.6e} > {tolerance})"
+            )
+        print(f"Startup canary check passed: pred={raw_pred:.4f}, expected={expected_rul:.4f}, diff={abs_diff:.2e}")
+        canary_tested = True
+
+    # 5. Load Scaler
+    try:
+        scaler = joblib.load(SCALER_PATH)
+        print(f"Loaded StandardScaler successfully from {SCALER_PATH}")
+    except Exception as e:
+        raise RuntimeError(f"STARTUP SELF-CHECK FAILED: Failed to load scaler from {SCALER_PATH}: {e}")
 
     # Load metadata
     if os.path.exists(RESULTS_PATH):
@@ -92,6 +178,7 @@ def startup_event():
             print(f"Error loading metadata: {e}")
     else:
         print(f"Warning: Metadata not found at {RESULTS_PATH}")
+
 
     # Setup InfluxDB client connection
     influx_url = os.getenv("INFLUXDB_URL", "http://localhost:8086")
@@ -419,10 +506,10 @@ def get_audit_verify():
         "message": message
     }
 
-# H6. GET /model/info - live model metadata, file sizes, shapes, test RMSE, and latency stats
+# H6. GET /model/info - live model metadata, registry data, file sizes, shapes, test RMSE, and latency stats
 @app.get("/model/info")
 def get_model_info():
-    global ort_session, latency_history, metadata
+    global ort_session, latency_history, metadata, registry_data
     
     # ONNX & TFLite file sizes read directly from disk
     onnx_size_bytes = os.path.getsize(MODEL_PATH) if os.path.exists(MODEL_PATH) else 0
@@ -473,7 +560,8 @@ def get_model_info():
         "test_rmse": test_rmse,
         "latency_p50_ms": round(p50, 3),
         "latency_p95_ms": round(p95, 3),
-        "sample_count": len(latencies)
+        "sample_count": len(latencies),
+        "registry": registry_data
     }
 
 # H7. GET /edge/stats - measured edge vs upstream bytes and empirical ratio

@@ -21,11 +21,25 @@ def sha256_file(filepath):
 
 def main():
     repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    backend_dir = os.path.join(repo_root, "backend")
-    raw_dir = os.path.join(backend_dir, "data", "raw")
-    processed_dir = os.path.join(backend_dir, "data", "processed")
-    model_dir = os.path.join(backend_dir, "model")
-    out_dir = os.path.join(repo_root, "frontend", "public", "offline")
+    try:
+        import sys
+        if repo_root not in sys.path:
+            sys.path.insert(0, repo_root)
+        from config import paths
+        raw_dir = str(paths.RAW_DATA_DIR)
+        processed_dir = str(paths.PROCESSED_DATA_DIR)
+        src_onnx = str(paths.ONNX_MODEL_PATH)
+        scaler_path = str(paths.SCALER_PATH)
+        out_dir = str(paths.OFFLINE_ASSETS_DIR)
+    except Exception:
+        backend_dir = os.path.join(repo_root, "backend")
+        raw_dir = os.path.join(backend_dir, "data", "raw")
+        processed_dir = os.path.join(backend_dir, "data", "processed")
+        model_dir = os.path.join(backend_dir, "model")
+        src_onnx = os.path.join(model_dir, "twinedge_rul.onnx")
+        scaler_path = os.path.join(processed_dir, "scaler.joblib")
+        out_dir = os.path.join(repo_root, "frontend", "public", "offline")
+
     fixtures_dir = os.path.join(repo_root, "frontend", "src", "test", "fixtures")
     os.makedirs(out_dir, exist_ok=True)
     os.makedirs(fixtures_dir, exist_ok=True)
@@ -33,13 +47,11 @@ def main():
     print("Exporting offline assets to:", out_dir)
 
     # 1. Copy model.onnx
-    src_onnx = os.path.join(model_dir, "twinedge_rul.onnx")
     dst_onnx = os.path.join(out_dir, "model.onnx")
     shutil.copyfile(src_onnx, dst_onnx)
     print(f"Copied model.onnx ({os.path.getsize(dst_onnx)} bytes)")
 
     # 2. Export scaler.json
-    scaler_path = os.path.join(processed_dir, "scaler.joblib")
     scaler = joblib.load(scaler_path)
     scaler_dict = {
         "mean": scaler.mean_.tolist(),

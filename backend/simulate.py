@@ -219,9 +219,14 @@ def run_list(train_df):
 
 
 def main():
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    default_raw = os.path.join(base_dir, "data", "raw")
-    default_processed = os.path.join(base_dir, "data", "processed")
+    try:
+        from config import paths
+        default_raw = str(paths.RAW_DATA_DIR)
+        default_processed = str(paths.PROCESSED_DATA_DIR)
+    except Exception:
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        default_raw = os.path.join(base_dir, "data", "raw")
+        default_processed = os.path.join(base_dir, "data", "processed")
 
     parser = argparse.ArgumentParser(description="TwinEdge MRO — real C-MAPSS data simulator")
     parser.add_argument("--mode", choices=["trajectory", "snapshot", "list"], default="snapshot")
