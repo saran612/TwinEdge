@@ -6,6 +6,7 @@ import {
   Play, Pause, RotateCcw, Eye, ShieldAlert, Cpu, 
   Activity, Layers, Info, Maximize2, Compass, Zap
 } from 'lucide-react';
+import { useApp } from '../context/AppContext';
 
 const HOTSPOTS = [
   {
@@ -55,6 +56,7 @@ export default function Turbofan3DView({
   selectedEngineId = 3, 
   onSelectEngine 
 }) {
+  const { theme } = useApp();
   const mountRef = useRef(null);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -77,6 +79,11 @@ export default function Turbofan3DView({
   const actionRef = useRef(null);
   const modelRef = useRef(null);
   const materialsRef = useRef([]);
+  const gridRef = useRef(null);
+  const ambientLightRef = useRef(null);
+  const keyLightRef = useRef(null);
+  const fillLightRef = useRef(null);
+  const rimLightRef = useRef(null);
 
   // Telemetry computation for selected engine
   const engineData = telemetry.filter(t => t.engine_id === selectedEngineId);
@@ -93,10 +100,10 @@ export default function Turbofan3DView({
     const width = container.clientWidth;
     const height = container.clientHeight;
 
-    // 1. Scene - Aerospace Light Studio Background
+    // 1. Scene Background
     const scene = new THREE.Scene();
     sceneRef.current = scene;
-    scene.background = new THREE.Color(0xf1f5f9);
+    scene.background = new THREE.Color(theme === 'light' ? 0xf1f5f9 : 0x060913);
 
     // 2. Camera
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
@@ -108,7 +115,7 @@ export default function Turbofan3DView({
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.1;
+    renderer.toneMappingExposure = theme === 'light' ? 1.1 : 1.3;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.innerHTML = '';
@@ -124,36 +131,43 @@ export default function Turbofan3DView({
     controls.target.set(0, 0, 0);
     controlsRef.current = controls;
 
-    // 5. Studio Lighting for Clean Metallic Reflection on Light Background
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1.4);
+    // 5. Studio Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, theme === 'light' ? 1.4 : 0.8);
     scene.add(ambientLight);
+    ambientLightRef.current = ambientLight;
 
-    const keyLight = new THREE.DirectionalLight(0xffffff, 2.0);
+    const keyLight = new THREE.DirectionalLight(0xffffff, theme === 'light' ? 2.0 : 1.6);
     keyLight.position.set(5, 8, 5);
     keyLight.castShadow = true;
     scene.add(keyLight);
+    keyLightRef.current = keyLight;
 
-    const fillLight = new THREE.DirectionalLight(0x94a3b8, 1.0); // Soft cool studio fill
+    const fillLight = new THREE.DirectionalLight(theme === 'light' ? 0x94a3b8 : 0x38bdf8, theme === 'light' ? 1.0 : 0.9);
     fillLight.position.set(-5, 4, 5);
     scene.add(fillLight);
+    fillLightRef.current = fillLight;
 
-    const rimLight = new THREE.DirectionalLight(0x6366f1, 0.7); // Crisp indigo rim
+    const rimLight = new THREE.DirectionalLight(theme === 'light' ? 0x6366f1 : 0x818cf8, theme === 'light' ? 0.7 : 1.1);
     rimLight.position.set(-6, -2, -5);
     scene.add(rimLight);
+    rimLightRef.current = rimLight;
 
     // Soft ground shadow plane for studio grounding
     const shadowGeo = new THREE.PlaneGeometry(12, 12);
-    const shadowMat = new THREE.ShadowMaterial({ opacity: 0.12 });
+    const shadowMat = new THREE.ShadowMaterial({ opacity: theme === 'light' ? 0.12 : 0.35 });
     const shadowPlane = new THREE.Mesh(shadowGeo, shadowMat);
     shadowPlane.rotation.x = -Math.PI / 2;
     shadowPlane.position.y = -1.2;
     shadowPlane.receiveShadow = true;
     scene.add(shadowPlane);
 
-    // Subtle Light Studio Grid
-    const grid = new THREE.GridHelper(12, 24, 0x6366f1, 0xcbd5e1);
+    // Grid helper
+    const gridColor1 = theme === 'light' ? 0x6366f1 : 0x1e293b;
+    const gridColor2 = theme === 'light' ? 0xcbd5e1 : 0x0f172a;
+    const grid = new THREE.GridHelper(12, 24, gridColor1, gridColor2);
     grid.position.y = -1.21;
     scene.add(grid);
+    gridRef.current = grid;
 
     // 6. Load Turbofan GLB
     const loader = new GLTFLoader();
@@ -279,6 +293,41 @@ export default function Turbofan3DView({
       }
     });
   }, [isXray]);
+
+  // Synchronize 3D Scene with theme switch
+  useEffect(() => {
+    if (sceneRef.current) {
+      sceneRef.current.background = new THREE.Color(theme === 'light' ? 0xf1f5f9 : 0x060913);
+    }
+    if (rendererRef.current) {
+      rendererRef.current.toneMappingExposure = theme === 'light' ? 1.1 : 1.3;
+    }
+    if (ambientLightRef.current) {
+      ambientLightRef.current.intensity = theme === 'light' ? 1.4 : 0.8;
+    }
+    if (keyLightRef.current) {
+      keyLightRef.current.intensity = theme === 'light' ? 2.0 : 1.6;
+    }
+    if (fillLightRef.current) {
+      fillLightRef.current.color.setHex(theme === 'light' ? 0x94a3b8 : 0x38bdf8);
+      fillLightRef.current.intensity = theme === 'light' ? 1.0 : 0.9;
+    }
+    if (rimLightRef.current) {
+      rimLightRef.current.color.setHex(theme === 'light' ? 0x6366f1 : 0x818cf8);
+      rimLightRef.current.intensity = theme === 'light' ? 0.7 : 1.1;
+    }
+    if (gridRef.current && sceneRef.current) {
+      sceneRef.current.remove(gridRef.current);
+      gridRef.current.geometry.dispose();
+      gridRef.current.material.dispose();
+      const gridColor1 = theme === 'light' ? 0x6366f1 : 0x1e293b;
+      const gridColor2 = theme === 'light' ? 0xcbd5e1 : 0x0f172a;
+      const newGrid = new THREE.GridHelper(12, 24, gridColor1, gridColor2);
+      newGrid.position.y = -1.21;
+      sceneRef.current.add(newGrid);
+      gridRef.current = newGrid;
+    }
+  }, [theme]);
 
   // Camera Presets
   const setCameraPreset = (view) => {

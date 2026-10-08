@@ -11,6 +11,7 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import componentMapData from '../../config/component_map.json';
+import { useApp } from '../../context/AppContext';
 
 export default function EngineViewport3D({
   selectedComponentId,
@@ -21,6 +22,7 @@ export default function EngineViewport3D({
   isXray = false,
   setIsXray,
 }) {
+  const { theme } = useApp();
   const mountRef = useRef(null);
   const [loadProgress, setLoadProgress] = useState(0);
   const [loadError, setLoadError] = useState(null);
@@ -34,6 +36,10 @@ export default function EngineViewport3D({
   const modelRef = useRef(null);
   const meshesRef = useRef([]);
   const anchorsRef = useRef([]);
+  const gridRef = useRef(null);
+  const ambientLightRef = useRef(null);
+  const dirLight1Ref = useRef(null);
+  const dirLight2Ref = useRef(null);
 
   // Test hook exposure when VITE_E2E=1 or dev
   useEffect(() => {
@@ -52,7 +58,7 @@ export default function EngineViewport3D({
 
     // 1. Scene & Camera setup
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x060913); // slate-950 tone
+    scene.background = new THREE.Color(theme === 'light' ? 0xf1f5f9 : 0x060913);
     sceneRef.current = scene;
 
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
@@ -117,21 +123,27 @@ export default function EngineViewport3D({
     controlsRef.current = controls;
 
     // 4. Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+    const ambientLight = new THREE.AmbientLight(0xffffff, theme === 'light' ? 1.3 : 0.8);
     scene.add(ambientLight);
+    ambientLightRef.current = ambientLight;
 
-    const dirLight1 = new THREE.DirectionalLight(0x818cf8, 1.5);
+    const dirLight1 = new THREE.DirectionalLight(0x818cf8, theme === 'light' ? 1.8 : 1.5);
     dirLight1.position.set(5, 8, 5);
     scene.add(dirLight1);
+    dirLight1Ref.current = dirLight1;
 
-    const dirLight2 = new THREE.DirectionalLight(0x38bdf8, 1.0);
+    const dirLight2 = new THREE.DirectionalLight(0x38bdf8, theme === 'light' ? 1.2 : 1.0);
     dirLight2.position.set(-5, -4, -5);
     scene.add(dirLight2);
+    dirLight2Ref.current = dirLight2;
 
     // 5. Grid helper
-    const grid = new THREE.GridHelper(8, 20, 0x1e293b, 0x0f172a);
+    const gridColor1 = theme === 'light' ? 0x6366f1 : 0x1e293b;
+    const gridColor2 = theme === 'light' ? 0xcbd5e1 : 0x0f172a;
+    const grid = new THREE.GridHelper(8, 20, gridColor1, gridColor2);
     grid.position.y = -1.2;
     scene.add(grid);
+    gridRef.current = grid;
 
     // 6. Create hotspot anchor spheres for each component
     const anchorsGroup = new THREE.Group();
@@ -312,6 +324,33 @@ export default function EngineViewport3D({
     });
   }, [selectedComponentId, colorMode, isXray]);
 
+  // Synchronize 3D Scene with global theme switch
+  useEffect(() => {
+    if (sceneRef.current) {
+      sceneRef.current.background = new THREE.Color(theme === 'light' ? 0xf1f5f9 : 0x060913);
+    }
+    if (ambientLightRef.current) {
+      ambientLightRef.current.intensity = theme === 'light' ? 1.3 : 0.8;
+    }
+    if (dirLight1Ref.current) {
+      dirLight1Ref.current.intensity = theme === 'light' ? 1.8 : 1.5;
+    }
+    if (dirLight2Ref.current) {
+      dirLight2Ref.current.intensity = theme === 'light' ? 1.2 : 1.0;
+    }
+    if (gridRef.current && sceneRef.current) {
+      sceneRef.current.remove(gridRef.current);
+      gridRef.current.geometry.dispose();
+      gridRef.current.material.dispose();
+      const gridColor1 = theme === 'light' ? 0x6366f1 : 0x1e293b;
+      const gridColor2 = theme === 'light' ? 0xcbd5e1 : 0x0f172a;
+      const newGrid = new THREE.GridHelper(8, 20, gridColor1, gridColor2);
+      newGrid.position.y = -1.2;
+      sceneRef.current.add(newGrid);
+      gridRef.current = newGrid;
+    }
+  }, [theme]);
+
   const resetCamera = () => {
     if (cameraRef.current && controlsRef.current) {
       cameraRef.current.position.set(4, 2.5, 4);
@@ -331,20 +370,20 @@ export default function EngineViewport3D({
   };
 
   return (
-    <div className="relative w-full h-full bg-slate-950 overflow-hidden flex flex-col select-none">
+    <div className="relative w-full h-full bg-surface overflow-hidden flex flex-col select-none">
       {/* 3D Viewport Toolbar */}
-      <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 rounded p-1 text-xs font-mono backdrop-blur-md">
+      <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5 bg-surface/90 border border-border rounded-md p-1 text-xs font-mono backdrop-blur-md shadow-xs">
         <button
           onClick={resetCamera}
-          className="p-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded transition-colors"
+          className="p-1.5 text-text-2 hover:text-text hover:bg-surface-2 rounded-sm transition-colors cursor-pointer"
           title="Reset Camera"
         >
           <RotateCcw className="w-3.5 h-3.5" />
         </button>
         <button
           onClick={() => setIsXray(!isXray)}
-          className={`p-1.5 rounded transition-colors ${
-            isXray ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:text-white hover:bg-slate-800'
+          className={`p-1.5 rounded-sm transition-colors cursor-pointer ${
+            isXray ? 'bg-accent text-on-accent' : 'text-text-2 hover:text-text hover:bg-surface-2'
           }`}
           title="X-Ray Mode"
         >
@@ -352,25 +391,25 @@ export default function EngineViewport3D({
         </button>
         <button
           onClick={takeScreenshot}
-          className="p-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded transition-colors"
+          className="p-1.5 text-text-2 hover:text-text hover:bg-surface-2 rounded-sm transition-colors cursor-pointer"
           title="Screenshot PNG"
         >
           <Camera className="w-3.5 h-3.5" />
         </button>
-        <div className="h-3 w-px bg-slate-800 mx-0.5"></div>
-        <span className="text-xs text-slate-400 px-1">{fps} FPS</span>
+        <div className="h-3 w-px bg-border mx-0.5"></div>
+        <span className="text-xs text-text-muted px-1">{fps} FPS</span>
       </div>
 
       {/* Loading Overlay */}
       {!isLoaded && (
-        <div className="absolute inset-0 z-30 bg-slate-950/80 backdrop-blur-xs flex flex-col items-center justify-center p-6 text-center">
-          <div className="w-48 bg-slate-800 rounded-full h-2 mb-3 overflow-hidden">
+        <div className="absolute inset-0 z-30 bg-surface/80 backdrop-blur-xs flex flex-col items-center justify-center p-6 text-center">
+          <div className="w-48 bg-surface-2 rounded-full h-2 mb-3 overflow-hidden border border-border">
             <div
-              className="bg-indigo-600 h-2 rounded-full transition-all duration-200"
+              className="bg-accent h-2 rounded-full transition-all duration-200"
               style={{ width: `${loadProgress}%` }}
             ></div>
           </div>
-          <span className="text-xs font-mono text-slate-300">
+          <span className="text-xs font-mono text-text-2">
             Loading Turbofan Geometry ({loadProgress}%)...
           </span>
         </div>
