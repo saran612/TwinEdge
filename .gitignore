@@ -34,3 +34,9 @@ backend/app/db.sqlite3
 .idea/
 .vscode/
 .gemini/
+
+# Audit & temporary sprint outputs
+.venv-audit/
+.tmp_audit/
+reports/model/raw/
+

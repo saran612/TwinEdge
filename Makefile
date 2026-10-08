@@ -1,0 +1,42 @@
+.PHONY: setup run-backend run-frontend test wiring audit benchmark all clean
+
+PYTHON := $(shell if [ -f .venv-audit/bin/python ]; then echo .venv-audit/bin/python; elif [ -f backend/venv/bin/python ]; then echo backend/venv/bin/python; else echo python3; fi)
+
+setup:
+	@echo "Setting up Python audit environment..."
+	@if [ ! -d .venv-audit ]; then \
+		python3 -m venv .venv-audit && \
+		.venv-audit/bin/pip install --upgrade pip && \
+		.venv-audit/bin/pip install -r backend/requirements.txt matplotlib pytest; \
+	fi
+	@echo "Setup completed."
+
+run-backend:
+	@echo "Starting backend..."
+	cd backend && ../$(PYTHON) -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+run-frontend:
+	@echo "Starting frontend dev server..."
+	cd frontend && npm run dev
+
+test:
+	@echo "Running tests..."
+	PYTHONPATH=backend:. $(PYTHON) -m pytest -v backend/app/test_main.py
+
+wiring:
+	@echo "Verifying wiring and model parity..."
+	PYTHONPATH=backend:. $(PYTHON) scripts/verify_wiring.py
+
+audit:
+	@echo "Running full model audit..."
+	PYTHONPATH=backend:. $(PYTHON) scripts/audit_model.py
+
+benchmark:
+	@echo "Running model efficiency benchmark..."
+	PYTHONPATH=backend:. $(PYTHON) scripts/benchmark_model.py
+
+all: wiring test audit benchmark
+	@echo "All model checks, wiring tests, and audit benchmarks succeeded."
+
+clean:
+	rm -rf .tmp_audit reports/model/raw
