@@ -1,0 +1,144 @@
+/* ==========================================================================
+   TWINEDGE DESIGN SYSTEM TOKENS (S1)
+   Enforces strict color, radius, typography, spacing, and contrast norms.
+   ========================================================================== */
+
+@import "@fontsource-variable/inter";
+@import "@fontsource/jetbrains-mono/400.css";
+
+:root,
+[data-theme="light"],
+html.light {
+  color-scheme: light;
+
+  /* App surfaces & layout */
+  --bg-app: #F5F6F8;
+  --surface: #FFFFFF;
+  --surface-2: #F0F2F5;
+  --border: #D7DBE2;
+
+  /* Typography */
+  --text: #14181F;
+  --text-2: #4A5260;
+  --text-muted: #5E6674;
+
+  /* Primary Accent */
+  --accent: #4F46E5;
+  --on-accent: #FFFFFF;
+  --selected-row: #EEF0FF;
+
+  /* Status Pair Tokens (Tested contrast in light mode) */
+  --status-healthy-text: #0B6B3A;
+  --status-healthy-bg: #E3F5EA;
+  --status-healthy-border: #97D4AF;
+
+  --status-degrading-text: #8A4B00;
+  --status-degrading-bg: #FDF0DC;
+  --status-degrading-border: #F7C686;
+
+  --status-critical-text: #A31D1D;
+  --status-critical-bg: #FCE6E6;
+  --status-critical-border: #F5A8A8;
+
+  --status-neutral-text: #3B4452;
+  --status-neutral-bg: #EBEEF2;
+  --status-neutral-border: #CBD2DC;
+
+  /* Chart tokens */
+  --chart-1: #4F46E5;
+  --chart-2: #059669;
+  --chart-3: #D97706;
+  --chart-4: #DC2626;
+  --chart-5: #0284C7;
+  --chart-6: #7C3AED;
+
+  /* Scrollbar */
+  --scrollbar-thumb: #D7DBE2;
+  --scrollbar-track: #F5F6F8;
+}
+
+[data-theme="dark"],
+html.dark {
+  color-scheme: dark;
+
+  /* App surfaces & layout */
+  --bg-app: #0E1116;
+  --surface: #161B22;
+  --surface-2: #1D232C;
+  --border: #2B3340;
+
+  /* Typography */
+  --text: #E8ECF2;
+  --text-2: #A9B2C0;
+  --text-muted: #8B95A5;
+
+  /* Primary Accent */
+  --accent: #8B93FF;
+  --on-accent: #0E1116;
+  --selected-row: rgba(139, 147, 255, 0.14);
+
+  /* Status Pair Tokens (Tested contrast in dark mode) */
+  --status-healthy-text: #6EE7A0;
+  --status-healthy-bg: #12301F;
+  --status-healthy-border: #1E5133;
+
+  --status-degrading-text: #FFC46B;
+  --status-degrading-bg: #3A2A0E;
+  --status-degrading-border: #5C4318;
+
+  --status-critical-text: #FF9B9B;
+  --status-critical-bg: #3A1515;
+  --status-critical-border: #622323;
+
+  --status-neutral-text: #C3CBD8;
+  --status-neutral-bg: #262D38;
+  --status-neutral-border: #3A4454;
+
+  /* Chart tokens */
+  --chart-1: #8B93FF;
+  --chart-2: #34D399;
+  --chart-3: #FBBF24;
+  --chart-4: #F87171;
+  --chart-5: #38BDF8;
+  --chart-6: #A78BFA;
+
+  /* Scrollbar */
+  --scrollbar-thumb: #2B3340;
+  --scrollbar-track: #0E1116;
+}
+
+/* Global resets per S1 */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* Tabular numbers globally for numbers */
+.tabular-nums, [data-tabular="true"] {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Thin token scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 9999px;
+}
+
+/* Token Focus Ring */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
