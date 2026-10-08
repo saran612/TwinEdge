@@ -30,7 +30,9 @@ export const NAV_PAGES = [
   { id: 'simulation', label: 'Simulation Lab', icon: Play },
   { id: 'about', label: 'Methodology & Claims', icon: FileText },
   { id: 'audit', label: 'Model Audit & Governance', icon: ShieldAlert },
+  { id: 'logs', label: 'System Logs', icon: FileText },
 ];
+
 
 export default function GlobalShell({ activePage, onNavigate, children }) {
   const {

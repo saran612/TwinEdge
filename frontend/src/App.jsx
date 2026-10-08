@@ -11,6 +11,7 @@ import SimulationLabPage from './pages/SimulationLabPage';
 import EdgeModelPage from './pages/EdgeModelPage';
 import MethodLimitsPage from './pages/MethodLimitsPage';
 import StyleguidePage from './pages/StyleguidePage';
+import LogsPage from './pages/LogsPage';
 
 export default function App() {
   const getInitialPage = () => {
@@ -51,6 +52,8 @@ export default function App() {
         return <AlertsPage />;
       case 'audit':
         return <AuditPage />;
+      case 'logs':
+        return <LogsPage />;
       case 'simulation':
         return <SimulationLabPage />;
       case 'edge':
@@ -61,6 +64,7 @@ export default function App() {
         return <OverviewPage onNavigateToTwin={() => setActivePage('twin')} onNavigateToAlerts={() => setActivePage('alerts')} />;
     }
   };
+
 
   const handleNavigate = (pageId) => {
     setActivePage(pageId);

@@ -64,4 +64,16 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(signoffData),
     }),
+  getFleet: () => fetchJson('/fleet'),
+  getTelemetry: (engineKey, limit = 500) => {
+    const qs = engineKey ? `?engine_key=${engineKey}&limit=${limit}` : `?limit=${limit}`;
+    return fetchJson(`/telemetry${qs}`);
+  },
+  getLogs: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return fetchJson(`/logs${qs ? `?${qs}` : ''}`);
+  },
+  getGovernanceModel: () => fetchJson('/governance/model'),
+  getGovernanceClaims: () => fetchJson('/governance/claims'),
 };
+
