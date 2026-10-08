@@ -1,0 +1,33 @@
+{
+  "scenario_1_backend_down_restore": {
+    "status": "PASS",
+    "buffered_offline": 40,
+    "remaining_after_drain": 15,
+    "predictions_preserved": true
+  },
+  "scenario_2_auto_failover_flap": {
+    "status": "PASS",
+    "site_initial": "CLOUD",
+    "site_on_link_cut": "EDGE",
+    "site_on_restore": "CLOUD"
+  },
+  "scenario_3_standalone_node": {
+    "status": "PASS",
+    "cycles_processed": 25,
+    "inference_valid": true
+  },
+  "scenario_4_crash_wal_resume": {
+    "status": "PASS",
+    "persisted_outbox_rows": 15,
+    "resumed_cycle": 30
+  },
+  "scenario_5_outbox_overflow_drop_policy": {
+    "status": "PASS",
+    "dropped_telemetry_count": 57,
+    "events_preserved": true
+  },
+  "scenario_6_sensor_fault_injection": {
+    "status": "PASS",
+    "sensor_s3_val": 1608.52
+  }
+}

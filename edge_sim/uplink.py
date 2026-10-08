@@ -30,6 +30,11 @@ class UplinkTransport:
         self.simulated_cut = cut
         if cut:
             self.is_link_up = False
+        else:
+            self.is_link_up = True
+
+    def set_link_state(self, is_up: bool):
+        self.set_simulated_cut(not is_up)
 
     def send_batch(self, items: List[Dict[str, Any]]) -> bool:
         if self.simulated_cut or not items:

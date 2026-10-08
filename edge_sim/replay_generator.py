@@ -52,6 +52,13 @@ class ReplayGenerator:
         self.current_cycle = self.start_cycle
         self._init_scenario()
 
+    def inject_fault(self, sensor: str, fault_type: str, magnitude: float = 1.0):
+        self.fault_config = {
+            "sensor": sensor,
+            "type": fault_type,
+            "magnitude": magnitude
+        }
+
     def _find_engine(self, key: str) -> Dict[str, Any]:
         parts = key.split("-")
         prefix = parts[0]
