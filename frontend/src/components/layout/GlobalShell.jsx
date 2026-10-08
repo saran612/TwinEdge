@@ -26,9 +26,9 @@ export const NAV_PAGES = [
   { id: 'twin', label: 'Digital Twin 3D', icon: Layers },
   { id: 'telemetry', label: 'Telemetry & Health', icon: Activity },
   { id: 'alerts', label: 'Alerts & Maintenance', icon: AlertTriangle, badge: true },
-  { id: 'model', label: 'Edge Model & Inference', icon: Sparkles },
-  { id: 'sim', label: 'Simulation Lab', icon: Play },
-  { id: 'method', label: 'Methodology & Claims', icon: FileText },
+  { id: 'edge', label: 'Edge Model & Inference', icon: Sparkles },
+  { id: 'simulation', label: 'Simulation Lab', icon: Play },
+  { id: 'about', label: 'Methodology & Claims', icon: FileText },
   { id: 'audit', label: 'Model Audit & Governance', icon: ShieldAlert },
 ];
 

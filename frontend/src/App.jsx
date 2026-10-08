@@ -62,9 +62,14 @@ export default function App() {
     }
   };
 
+  const handleNavigate = (pageId) => {
+    setActivePage(pageId);
+    window.location.hash = `#/${pageId}`;
+  };
+
   return (
     <AppProvider>
-      <GlobalShell activePage={activePage} onNavigate={(pageId) => setActivePage(pageId)}>
+      <GlobalShell activePage={activePage} onNavigate={handleNavigate}>
         {renderActivePage()}
       </GlobalShell>
     </AppProvider>
