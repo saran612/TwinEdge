@@ -22,6 +22,29 @@ export function AppProvider({ children }) {
   const [playbackSpeed, setPlaybackSpeed] = useState(1); // 0.5x - 8x
   const [isRubricsOpen, setIsRubricsOpen] = useState(false);
 
+  // Theme state: 'dark' | 'light'
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('twinedge_theme') || 'dark';
+  });
+
+  const toggleTheme = () => {
+    setTheme((prev) => {
+      const next = prev === 'dark' ? 'light' : 'dark';
+      localStorage.setItem('twinedge_theme', next);
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+    } else {
+      document.documentElement.classList.add('light');
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
+
   // Connectivity status pills: OK | DOWN | UNKNOWN + last checked timestamp
   const [connectivity, setConnectivity] = useState({
     backend: { status: 'UNKNOWN', lastChecked: null, detail: '' },
@@ -84,6 +107,8 @@ export function AppProvider({ children }) {
         setIsPlaying,
         playbackSpeed,
         setPlaybackSpeed,
+        theme,
+        toggleTheme,
         isRubricsOpen,
         setIsRubricsOpen,
         connectivity,

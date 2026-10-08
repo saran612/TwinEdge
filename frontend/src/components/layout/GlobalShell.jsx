@@ -11,6 +11,8 @@ import {
   Info,
   Sliders,
   ChevronDown,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import RubricsDrawer from '../common/RubricsDrawer';
 import EngineSplitBadge from '../common/EngineSplitBadge';
@@ -38,6 +40,8 @@ export default function GlobalShell({ activePage, onNavigate, children }) {
     setIsRubricsOpen,
     connectivity,
     pendingAlertCount,
+    theme,
+    toggleTheme,
   } = useApp();
 
   const getPillStyle = (status) => {
@@ -140,6 +144,27 @@ export default function GlobalShell({ activePage, onNavigate, children }) {
               );
             })}
           </div>
+
+          {/* Theme Toggle Button */}
+          <button
+            id="theme-toggle-btn"
+            onClick={toggleTheme}
+            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            title={`Current theme: ${theme}. Click to switch.`}
+          >
+            {theme === 'dark' ? (
+              <>
+                <Sun className="w-3.5 h-3.5 text-amber-400" />
+                <span className="hidden sm:inline">Light</span>
+              </>
+            ) : (
+              <>
+                <Moon className="w-3.5 h-3.5 text-indigo-400" />
+                <span className="hidden sm:inline">Dark</span>
+              </>
+            )}
+          </button>
 
           {/* Rubrics Button */}
           <button
