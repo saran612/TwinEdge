@@ -201,7 +201,42 @@ TwinEdge/
 
 ---
 
-## Model Performance & Evaluation
+---
 
-For measured benchmarks, test set RMSE metrics, and CPU latency timings of the edge 1D CNN model, see the [results.md](docs/results.md) documentation.
+## Run the Fleet (Live Stream Hybrid System)
+
+TwinEdge includes an edge simulation system (`edge_sim`) capable of running multiple independent virtual aircraft engine processes sending high-frequency live telemetry with local ONNX inference, priority Outbox queues, and hybrid uplink failover.
+
+### 1. Online Multi-Node Fleet
+Launch a simulated 3-engine fleet (5 cycles/s) communicating with the cloud backend:
+```bash
+python -m edge_sim run --nodes 3 --engines VAL-001,VAL-005,TEST-002 --rate 5 --inference auto --uplink http --cloud-url http://localhost:8000 --base-port 8100
+```
+Or via Makefile shortcut:
+```bash
+make fleet
+```
+
+### 2. Standalone Offline Edge Node
+Run an edge node without cloud connectivity. The node performs local ONNX inference, persists telemetry to a local SQLite WAL database, and serves an edge HTTP API (`http://localhost:8100`):
+```bash
+python -m edge_sim run --nodes 1 --engines VAL-001 --rate 2 --inference edge --uplink http --cloud-url "" --base-port 8100
+```
+Or via Makefile shortcut:
+```bash
+make fleet-offline
+```
+
+### 3. Automated Chaos Resilience Suite
+Run the full automated chaos injection harness (verifies backend outage buffering, link failover flap, crash recovery, and priority drop policies):
+```bash
+PYTHONPATH=backend:. python scripts/chaos.py
+```
+Or via Makefile shortcut:
+```bash
+make chaos
+```
+
+For protocol schemas, drop policies, and SSE details, see [docs/stream-protocol.md](docs/stream-protocol.md).
+
 

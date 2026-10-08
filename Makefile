@@ -38,5 +38,17 @@ benchmark:
 all: wiring test audit benchmark
 	@echo "All model checks, wiring tests, and audit benchmarks succeeded."
 
+fleet:
+	@echo "Starting 3-node online fleet (5 Hz)..."
+	PYTHONPATH=backend:. $(PYTHON) -m edge_sim run --nodes 3 --engines VAL-001,VAL-005,TEST-002 --rate 5 --inference auto --uplink http --cloud-url http://localhost:8000 --base-port 8100
+
+fleet-offline:
+	@echo "Starting standalone offline edge node..."
+	PYTHONPATH=backend:. $(PYTHON) -m edge_sim run --nodes 1 --engines VAL-001 --rate 2 --inference edge --uplink http --cloud-url "" --base-port 8100
+
+chaos:
+	@echo "Running automated chaos resilience harness..."
+	PYTHONPATH=backend:. $(PYTHON) scripts/chaos.py
+
 clean:
-	rm -rf .tmp_audit reports/model/raw
+	rm -rf .tmp_audit reports/model/raw data/edge
