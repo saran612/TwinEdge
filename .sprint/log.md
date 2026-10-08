@@ -1,6 +1,6 @@
-# Sprint Log
+# Sprint Execution Log
 
-## Setup
-- Created branch `sprint/hardening`.
-- Recorded baseline state in `.sprint/baseline.md`.
-- Initialized tracking files: `TASKS.md`, `log.md`, `ASSUMPTIONS.md`, `BLOCKED.md`, `evidence/`.
+## 2026-10-07 Initial Setup
+- Initialized branch `sprint/frontend` from `sprint/hardening`.
+- Verified baseline tests: Pytest passed 9/9, Vite production build completed with exit 0.
+- Created `.sprint/TASKS.md`, `.sprint/log.md`, `.sprint/BLOCKED.md`, `.sprint/ASSUMPTIONS.md`.

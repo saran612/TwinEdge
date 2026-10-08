@@ -1,3 +1,3 @@
-# Blocked Tasks Log
+# Blocked Items Log
 
-No tasks currently blocked.
+Currently no blocked items.

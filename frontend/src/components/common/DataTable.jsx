@@ -118,7 +118,7 @@ export default function DataTable({
                 const isSelected = selectedKey !== undefined && row[keyField] === selectedKey;
                 return (
                   <tr
-                    key={row[keyField]}
+                    key={`${row.split || 'SPLIT'}_${row[keyField]}`}
                     onClick={() => onRowClick && onRowClick(row)}
                     className={`transition-colors ${
                       onRowClick ? 'cursor-pointer hover:bg-slate-800/40' : ''

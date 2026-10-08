@@ -262,7 +262,8 @@ async def predict(data: WindowInput, request: Request):
     edge_stats_state["upstream_payload_bytes"] += payload_len
 
     try:
-        window_arr = np.array(data.window, dtype=np.float32)
+        # Use float64 to preserve precision during StandardScaler transformation (matching training pipeline)
+        window_arr = np.array(data.window, dtype=np.float64)
         # Check dimensionality
         if window_arr.ndim != 2:
             raise HTTPException(
@@ -342,7 +343,8 @@ async def predict(data: WindowInput, request: Request):
             print(f"Error buffering telemetry in predict: {e}")
 
         return {
-            "rul_prediction": round(rul_pred, 2),
+            "rul_prediction": rul_pred,
+            "rul_prediction_display": round(rul_pred, 2),
             "anomaly_flag": anomaly_flag,
             "inference_latency_ms": round(inference_latency_ms, 3)
         }
