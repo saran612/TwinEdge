@@ -582,3 +582,294 @@ def get_edge_stats():
         "upstream_payload_bytes": upstream,
         "payload_to_raw_ratio": round(ratio, 4)
     }
+
+# =========================================================================
+# PART C: STREAMING & HYBRID FLEET ENDPOINTS
+# =========================================================================
+
+from fastapi.responses import StreamingResponse
+import asyncio
+from typing import Dict, Any
+
+class IngestBatchItem(BaseModel):
+    device_id: str
+    seq: int
+    kind: str
+    data: Dict[str, Any]
+
+@app.post("/ingest")
+async def ingest_batch(items: List[IngestBatchItem], request: Request):
+    """
+    Idempotent batch ingest endpoint for edge node telemetry, predictions, and events.
+    """
+    device_key = request.headers.get("X-Device-Key", "unknown")
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    now_ts = time.time()
+    
+    received_count = 0
+    gaps_detected = 0
+
+    for item in items:
+        dev_id = item.device_id
+        seq = item.seq
+        kind = item.kind
+        d = item.data
+
+        session_id = d.get("session_id", "default")
+        engine_key = d.get("engine_key", "VAL-001")
+        cycle = d.get("cycle", 1)
+
+        # Update or insert device tracking
+        cursor.execute("SELECT last_seq FROM devices WHERE device_id = ?", (dev_id,))
+        row = cursor.fetchone()
+        if row:
+            last_seq = row[0]
+            if seq > last_seq + 1:
+                gaps_detected += (seq - last_seq - 1)
+                # Log gap event
+                cursor.execute("""
+                    INSERT INTO stream_events (device_id, session_id, engine_key, seq, kind, message, level, source, ts)
+                    VALUES (?, ?, ?, ?, 'gap_detected', ?, 'WARN', 'cloud', ?)
+                """, (dev_id, session_id, engine_key, seq, f"Sequence gap detected: expected {last_seq+1}, got {seq}", now_ts))
+            
+            cursor.execute("""
+                UPDATE devices 
+                SET last_seen = ?, last_seq = MAX(last_seq, ?), link_status = 'online'
+                WHERE device_id = ?
+            """, (now_ts, seq, dev_id))
+        else:
+            cursor.execute("""
+                INSERT INTO devices (device_id, engine_key, session_id, mode, inference_site, link_status, last_seen, last_seq, queue_depth)
+                VALUES (?, ?, ?, 'auto', 'EDGE', 'online', ?, ?, 0)
+            """, (dev_id, engine_key, session_id, now_ts, seq))
+
+        # Handle kind
+        if kind == "telemetry":
+            cursor.execute("""
+                INSERT OR IGNORE INTO stream_telemetry (device_id, session_id, engine_key, seq, cycle, edge_ts, sensors, ground_truth)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (dev_id, session_id, engine_key, seq, cycle, d.get("edge_ts", now_ts), json.dumps(d.get("sensors", {})), json.dumps(d.get("ground_truth", {}))))
+            received_count += 1
+
+        elif kind == "prediction":
+            inf = d.get("inference", {})
+            twin = d.get("twin", {})
+            rul = inf.get("rul", 125.0)
+            cursor.execute("""
+                INSERT OR IGNORE INTO stream_predictions (device_id, session_id, engine_key, seq, cycle, site, rul_pred, latency_ms, health_index, band, ts)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (dev_id, session_id, engine_key, seq, cycle, inf.get("site", "EDGE"), rul, inf.get("latency_ms", 0.0), twin.get("health_index", 100), twin.get("band", "HEALTHY"), now_ts))
+            received_count += 1
+
+        elif kind.startswith("event_"):
+            ev_kind = kind.replace("event_", "")
+            cursor.execute("""
+                INSERT INTO stream_events (device_id, session_id, engine_key, seq, kind, message, data, level, source, ts)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'INFO', 'edge', ?)
+            """, (dev_id, session_id, engine_key, seq, ev_kind, d.get("message", ""), json.dumps(d.get("data", {})), now_ts))
+            received_count += 1
+
+    conn.commit()
+    conn.close()
+    return {"status": "ok", "received": received_count, "gaps": gaps_detected}
+
+@app.get("/fleet")
+def get_fleet():
+    """
+    Returns list of connected and recorded fleet edge devices.
+    """
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
+    c.execute("""
+        SELECT device_id, engine_key, session_id, mode, inference_site, link_status, last_seen, last_seq, queue_depth, model_sha, model_sha_match
+        FROM devices
+        ORDER BY device_id ASC
+    """)
+    rows = c.fetchall()
+    conn.close()
+
+    now = time.time()
+    devices = []
+    for r in rows:
+        d = dict(r)
+        if now - d["last_seen"] > 15:
+            d["link_status"] = "offline"
+        devices.append(d)
+    return devices
+
+@app.get("/telemetry")
+def get_stream_telemetry(engine_key: Optional[str] = None, session_id: Optional[str] = None, from_cycle: int = 1, to_cycle: Optional[int] = None, limit: int = 500):
+    """
+    Query telemetry history from SQLite source of truth.
+    """
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
+    
+    query = "SELECT * FROM stream_telemetry WHERE 1=1"
+    params = []
+    if engine_key:
+        query += " AND engine_key = ?"
+        params.append(engine_key)
+    if session_id:
+        query += " AND session_id = ?"
+        params.append(session_id)
+    if from_cycle:
+        query += " AND cycle >= ?"
+        params.append(from_cycle)
+    if to_cycle:
+        query += " AND cycle <= ?"
+        params.append(to_cycle)
+    query += " ORDER BY cycle ASC LIMIT ?"
+    params.append(limit)
+
+    c.execute(query, params)
+    rows = c.fetchall()
+    conn.close()
+
+    results = []
+    for r in rows:
+        d = dict(r)
+        d["sensors"] = json.loads(d["sensors"])
+        if d["ground_truth"]:
+            d["ground_truth"] = json.loads(d["ground_truth"])
+        results.append(d)
+    return results
+
+@app.get("/stream/fleet")
+async def stream_fleet_sse(request: Request):
+    """
+    SSE stream of all fleet events and telemetry frames.
+    """
+    async def sse_gen():
+        last_id = 0
+        while True:
+            if await request.is_disconnected():
+                break
+            conn = sqlite3.connect(DB_PATH)
+            conn.row_factory = sqlite3.Row
+            c = conn.cursor()
+            c.execute("SELECT * FROM stream_events WHERE id > ? ORDER BY id ASC LIMIT 20", (last_id,))
+            events = c.fetchall()
+            conn.close()
+
+            for ev in events:
+                last_id = ev["id"]
+                data_str = json.dumps(dict(ev))
+                yield f"id: {last_id}\nevent: fleet_event\ndata: {data_str}\n\n"
+            await asyncio.sleep(0.5)
+
+    return StreamingResponse(sse_gen(), media_type="text/event-stream")
+
+@app.get("/stream/{engine_key}")
+async def stream_engine_sse(engine_key: str, request: Request):
+    """
+    SSE stream for a specific engine key.
+    """
+    async def sse_gen():
+        last_seq = 0
+        while True:
+            if await request.is_disconnected():
+                break
+            conn = sqlite3.connect(DB_PATH)
+            conn.row_factory = sqlite3.Row
+            c = conn.cursor()
+            c.execute("""
+                SELECT t.*, p.rul_pred, p.health_index, p.band, p.site, p.latency_ms
+                FROM stream_telemetry t
+                LEFT JOIN stream_predictions p 
+                  ON t.device_id = p.device_id AND t.session_id = p.session_id AND t.cycle = p.cycle
+                WHERE t.engine_key = ? AND t.seq > ?
+                ORDER BY t.seq ASC LIMIT 10
+            """, (engine_key, last_seq))
+            rows = c.fetchall()
+            conn.close()
+
+            for r in rows:
+                last_seq = r["seq"]
+                frame = dict(r)
+                frame["sensors"] = json.loads(frame["sensors"])
+                yield f"id: {last_seq}\nevent: engine_frame\ndata: {json.dumps(frame)}\n\n"
+            await asyncio.sleep(0.2)
+
+    return StreamingResponse(sse_gen(), media_type="text/event-stream")
+
+@app.get("/logs")
+def get_logs(level: Optional[str] = None, source: Optional[str] = None, device: Optional[str] = None, engine: Optional[str] = None, q: Optional[str] = None, limit: int = 100):
+    """
+    Structured logs endpoint from stream_events table.
+    """
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
+
+    query = "SELECT * FROM stream_events WHERE 1=1"
+    params = []
+    if level:
+        query += " AND level = ?"
+        params.append(level)
+    if source:
+        query += " AND source = ?"
+        params.append(source)
+    if device:
+        query += " AND device_id = ?"
+        params.append(device)
+    if engine:
+        query += " AND engine_key = ?"
+        params.append(engine)
+    if q:
+        query += " AND (message LIKE ? OR kind LIKE ?)"
+        params.extend([f"%{q}%", f"%{q}%"])
+
+    query += " ORDER BY id DESC LIMIT ?"
+    params.append(limit)
+
+    c.execute(query, params)
+    rows = c.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+@app.get("/governance/model")
+def get_governance_model():
+    """
+    Reads verified model audit findings from reports/model/MODEL_AUDIT.md.
+    """
+    audit_file = os.path.join(ROOT_DIR, "reports", "model", "MODEL_AUDIT.md")
+    if not os.path.exists(audit_file):
+        raise HTTPException(status_code=404, detail="MODEL_AUDIT.md not found. Run scripts/audit_model.py first.")
+    with open(audit_file, "r") as f:
+        content = f.read()
+
+    return {
+        "verdict": "WEAK",
+        "model_sha": _compute_sha256(MODEL_PATH) if os.path.exists(MODEL_PATH) else "",
+        "content_md": content,
+        "allowed_quotes": [
+            {"metric": "Test RMSE (Capped)", "value": "16.1972", "context": "C-MAPSS FD001 test split, cap 125"},
+            {"metric": "Test MAE (Capped)", "value": "12.4734", "context": "Mean absolute error"},
+            {"metric": "Test R² Score", "value": "0.8366", "context": "Coefficient of determination"},
+            {"metric": "ONNX Latency (Batch 1)", "value": "0.042 ms", "context": "p50 direct engine execution"}
+        ],
+        "forbidden_quotes": [
+            {"claim": "0.139 ms Latency", "reason": "Measured raw tensor loop; ignores API and scaling overhead."},
+            {"claim": "Superior CNN Performance", "reason": "HistGBM (14.27) and Ridge (15.89) equal or outperform 1D-CNN."}
+        ]
+    }
+
+@app.get("/governance/claims")
+def get_governance_claims():
+    """
+    Reads claims matrix from CLAIMS.md.
+    """
+    claims_file = os.path.join(ROOT_DIR, "CLAIMS.md")
+    if not os.path.exists(claims_file):
+        raise HTTPException(status_code=404, detail="CLAIMS.md not found.")
+    with open(claims_file, "r") as f:
+        content = f.read()
+    return {
+        "title": "System Claims Matrix: Permitted vs Forbidden",
+        "content_md": content
+    }
+

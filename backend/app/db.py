@@ -1,11 +1,10 @@
 import os
 import sqlite3
+import hashlib
 from datetime import datetime
+from typing import Optional, List, Dict, Any, Tuple
 
 DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "db.sqlite3"))
-
-import hashlib
-
 GENESIS_PREV_HASH = "0" * 64
 
 def compute_audit_hash(prev_hash: str, alert_id: str, engine_id: int, cycle: int, action: str, reviewer_id: str, predicted_rul: float, notes: str, timestamp: str) -> str:
@@ -14,9 +13,10 @@ def compute_audit_hash(prev_hash: str, alert_id: str, engine_id: int, cycle: int
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)
+    conn.execute("PRAGMA journal_mode=WAL;")
     cursor = conn.cursor()
     
-    # Create alerts table
+    # 1. Existing Alerts table + non-destructive column additions
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS alerts (
             id TEXT PRIMARY KEY,
@@ -30,26 +30,106 @@ def init_db():
             signoff_time TEXT
         )
     """)
-    
-    # Create local buffer table for telemetry (resilience backup)
+    alert_cols = [r[1] for r in cursor.execute("PRAGMA table_info(alerts)").fetchall()]
+    if "session_id" not in alert_cols:
+        cursor.execute("ALTER TABLE alerts ADD COLUMN session_id TEXT DEFAULT 'legacy'")
+    if "device_id" not in alert_cols:
+        cursor.execute("ALTER TABLE alerts ADD COLUMN device_id TEXT DEFAULT 'legacy'")
+    if "engine_key" not in alert_cols:
+        cursor.execute("ALTER TABLE alerts ADD COLUMN engine_key TEXT DEFAULT 'VAL-001'")
+
+    # Non-destructive migration of stale pre-existing alerts:
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS telemetry_buffer (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            engine_id INTEGER NOT NULL,
-            cycle INTEGER NOT NULL,
-            timestamp TEXT NOT NULL,
-            payload TEXT NOT NULL,
-            UNIQUE(engine_id, cycle)
+        UPDATE alerts 
+        SET session_id = 'legacy', status = 'ARCHIVED'
+        WHERE session_id = 'legacy' AND status = 'PENDING'
+    """)
+
+    # 2. Devices registry table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS devices (
+            device_id TEXT PRIMARY KEY,
+            engine_key TEXT NOT NULL,
+            session_id TEXT NOT NULL,
+            mode TEXT NOT NULL,
+            inference_site TEXT NOT NULL,
+            link_status TEXT NOT NULL,
+            last_seen REAL NOT NULL,
+            last_seq INTEGER NOT NULL,
+            queue_depth INTEGER DEFAULT 0,
+            model_sha TEXT,
+            model_sha_match INTEGER DEFAULT 1
         )
     """)
 
-    # Ensure unique index exists
+    # 3. Stream Sessions table
     cursor.execute("""
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_telemetry_buffer_engine_cycle 
-        ON telemetry_buffer(engine_id, cycle)
+        CREATE TABLE IF NOT EXISTS sessions (
+            session_id TEXT PRIMARY KEY,
+            device_id TEXT NOT NULL,
+            engine_key TEXT NOT NULL,
+            start_time REAL NOT NULL,
+            end_time REAL,
+            status TEXT NOT NULL
+        )
     """)
 
-    # Create immutable audit_trail table
+    # 4. Canonical Ingested Telemetry table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS stream_telemetry (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            device_id TEXT NOT NULL,
+            session_id TEXT NOT NULL,
+            engine_key TEXT NOT NULL,
+            seq INTEGER NOT NULL,
+            cycle INTEGER NOT NULL,
+            edge_ts REAL NOT NULL,
+            sensors TEXT NOT NULL,
+            ground_truth TEXT,
+            UNIQUE(device_id, seq)
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_telemetry_eng_sess ON stream_telemetry(engine_key, session_id, cycle);")
+
+    # 5. Predictions table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS stream_predictions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            device_id TEXT NOT NULL,
+            session_id TEXT NOT NULL,
+            engine_key TEXT NOT NULL,
+            seq INTEGER NOT NULL,
+            cycle INTEGER NOT NULL,
+            site TEXT NOT NULL,
+            rul_pred REAL NOT NULL,
+            latency_ms REAL,
+            health_index INTEGER,
+            band TEXT,
+            ts REAL NOT NULL,
+            UNIQUE(device_id, session_id, cycle)
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_pred_eng_sess ON stream_predictions(engine_key, session_id, cycle);")
+
+    # 6. Stream Events & Logs table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS stream_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            device_id TEXT NOT NULL,
+            session_id TEXT NOT NULL,
+            engine_key TEXT NOT NULL,
+            seq INTEGER,
+            kind TEXT NOT NULL,
+            message TEXT NOT NULL,
+            data TEXT,
+            level TEXT DEFAULT 'INFO',
+            source TEXT DEFAULT 'edge',
+            ts REAL NOT NULL
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_events_ts ON stream_events(ts DESC);")
+
+    # 7. Audit trail table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS audit_trail (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -66,7 +146,17 @@ def init_db():
         )
     """)
 
-    # Create immutable predictions table for K-cycle alert gating
+    # 8. Legacy telemetry_buffer & predictions tables for backward compatibility
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS telemetry_buffer (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            engine_id INTEGER NOT NULL,
+            cycle INTEGER NOT NULL,
+            timestamp TEXT NOT NULL,
+            payload TEXT NOT NULL,
+            UNIQUE(engine_id, cycle)
+        )
+    """)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS predictions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -77,14 +167,10 @@ def init_db():
             UNIQUE(engine_id, cycle)
         )
     """)
-    cursor.execute("""
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_predictions_engine_cycle
-        ON predictions(engine_id, cycle)
-    """)
 
     conn.commit()
     conn.close()
-    print(f"Database initialized at {DB_PATH}")
+    print(f"Database initialized with streaming extensions at {DB_PATH}")
 
 def append_audit_entry(alert_id: str, engine_id: int, cycle: int, action: str, reviewer_id: str, predicted_rul: float, notes: str, conn: sqlite3.Connection = None) -> dict:
     should_close = False
@@ -93,7 +179,6 @@ def append_audit_entry(alert_id: str, engine_id: int, cycle: int, action: str, r
         should_close = True
         
     cursor = conn.cursor()
-    # Get last hash in the chain
     cursor.execute("SELECT row_hash FROM audit_trail ORDER BY id DESC LIMIT 1")
     last_row = cursor.fetchone()
     prev_hash = last_row[0] if last_row else GENESIS_PREV_HASH
@@ -133,26 +218,17 @@ def append_audit_entry(alert_id: str, engine_id: int, cycle: int, action: str, r
         "row_hash": row_hash
     }
 
-def record_prediction_and_check_alert(engine_id: int, cycle: int, rul_pred: float, threshold: float = 60.0, k: int = 3) -> tuple:
-    """
-    Inserts prediction into predictions table (unique on engine_id + cycle, ignores duplicates).
-    Evaluates whether the last K stored predictions (by cycle, cycle <= current) are ALL below threshold.
-    If so, raises or updates an alert for this engine if one isn't already active/handled.
-    Ensures at most one pending alert per engine.
-    Returns: (alert_raised_or_updated: bool, anomaly_flag: int, alert_id: Optional[str])
-    """
+def record_prediction_and_check_alert(engine_id: int, cycle: int, rul_pred: float, threshold: float = 60.0, k: int = 3, session_id: str = "default", engine_key: str = "VAL-001", device_id: str = "edge-01") -> tuple:
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     now_ts = datetime.utcnow().isoformat()
     
-    # 1. Insert prediction (ignore duplicates)
     cursor.execute("""
         INSERT OR IGNORE INTO predictions (engine_id, cycle, rul_pred, timestamp)
         VALUES (?, ?, ?, ?)
     """, (engine_id, cycle, rul_pred, now_ts))
     
-    # 2. Query last K stored predictions for this engine where cycle <= current_cycle ordered by cycle DESC
     cursor.execute("""
         SELECT cycle, rul_pred FROM predictions
         WHERE engine_id = ? AND cycle <= ?
@@ -161,20 +237,15 @@ def record_prediction_and_check_alert(engine_id: int, cycle: int, rul_pred: floa
     """, (engine_id, cycle, k))
     last_k_rows = cursor.fetchall()
     
-    # Alert conditions:
-    # We must have at least K predictions, and ALL K predictions must have rul_pred < threshold
     sustained_k = (len(last_k_rows) == k) and all(r["rul_pred"] < threshold for r in last_k_rows)
-    
     alert_created = False
     alert_id = None
     
     if sustained_k:
-        # Check if there is already an active PENDING alert for this engine
-        cursor.execute("SELECT id, cycle FROM alerts WHERE engine_id = ? AND status = 'PENDING'", (engine_id,))
+        cursor.execute("SELECT id, cycle FROM alerts WHERE session_id = ? AND engine_key = ? AND status = 'PENDING'", (session_id, engine_key))
         existing_pending = cursor.fetchone()
         
         if existing_pending:
-            # Update existing pending alert if current cycle is newer or equal
             alert_id = existing_pending["id"]
             cursor.execute("""
                 UPDATE alerts
@@ -188,46 +259,40 @@ def record_prediction_and_check_alert(engine_id: int, cycle: int, rul_pred: floa
                 action="ALERT_UPDATED",
                 reviewer_id="",
                 predicted_rul=rul_pred,
-                notes=f"Sustained alert updated at cycle {cycle} (last {k} cycles < {threshold})",
+                notes=f"Sustained alert updated at cycle {cycle}",
                 conn=conn
             )
             alert_created = True
         else:
-            # Check if this exact cycle was already alerted in a resolved ticket
-            cursor.execute("SELECT id FROM alerts WHERE engine_id = ? AND cycle = ?", (engine_id, cycle))
-            existing_cycle = cursor.fetchone()
-            if not existing_cycle:
-                alert_id = f"alert_engine_{engine_id}_cycle_{cycle}"
-                cursor.execute("""
-                    INSERT INTO alerts (id, engine_id, cycle, rul_prediction, anomaly_flag, status, timestamp)
-                    VALUES (?, ?, ?, ?, 1, 'PENDING', ?)
-                """, (alert_id, engine_id, cycle, rul_pred, now_ts))
-                append_audit_entry(
-                    alert_id=alert_id,
-                    engine_id=engine_id,
-                    cycle=cycle,
-                    action="ALERT_RAISED",
-                    reviewer_id="",
-                    predicted_rul=rul_pred,
-                    notes=f"Alert raised: sustained {k} cycles with RUL < {threshold}",
-                    conn=conn
-                )
-                alert_created = True
+            alert_id = f"alert_{device_id}_{cycle}"
+            cursor.execute("""
+                INSERT INTO alerts (id, engine_id, cycle, rul_prediction, anomaly_flag, status, timestamp, session_id, device_id, engine_key)
+                VALUES (?, ?, ?, ?, 1, 'PENDING', ?, ?, ?, ?)
+            """, (alert_id, engine_id, cycle, rul_pred, now_ts, session_id, device_id, engine_key))
+            append_audit_entry(
+                alert_id=alert_id,
+                engine_id=engine_id,
+                cycle=cycle,
+                action="ALERT_RAISED",
+                reviewer_id="",
+                predicted_rul=rul_pred,
+                notes=f"Alert raised: sustained {k} cycles with RUL < {threshold}",
+                conn=conn
+            )
+            alert_created = True
     
     conn.commit()
     conn.close()
     return alert_created, 1 if sustained_k else 0, alert_id
 
-def add_alert(alert_id, engine_id, cycle, rul_prediction, anomaly_flag):
+def add_alert(alert_id, engine_id, cycle, rul_prediction, anomaly_flag, session_id="default", engine_key="VAL-001", device_id="edge-01"):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     timestamp = datetime.utcnow().isoformat()
     try:
-        # Check if there is already an active pending alert for this engine
-        cursor.execute("SELECT id FROM alerts WHERE engine_id = ? AND status = 'PENDING'", (engine_id,))
+        cursor.execute("SELECT id FROM alerts WHERE session_id = ? AND engine_key = ? AND status = 'PENDING'", (session_id, engine_key))
         existing = cursor.fetchone()
         if existing:
-            # Update the existing pending alert with latest telemetry cycle and RUL
             cursor.execute("""
                 UPDATE alerts 
                 SET cycle = ?, rul_prediction = ?, anomaly_flag = ?, timestamp = ? 
@@ -245,9 +310,9 @@ def add_alert(alert_id, engine_id, cycle, rul_prediction, anomaly_flag):
             )
         else:
             cursor.execute("""
-                INSERT OR REPLACE INTO alerts (id, engine_id, cycle, rul_prediction, anomaly_flag, status, timestamp)
-                VALUES (?, ?, ?, ?, ?, 'PENDING', ?)
-            """, (alert_id, engine_id, cycle, rul_prediction, anomaly_flag, timestamp))
+                INSERT OR REPLACE INTO alerts (id, engine_id, cycle, rul_prediction, anomaly_flag, status, timestamp, session_id, device_id, engine_key)
+                VALUES (?, ?, ?, ?, ?, 'PENDING', ?, ?, ?, ?)
+            """, (alert_id, engine_id, cycle, rul_prediction, anomaly_flag, timestamp, session_id, device_id, engine_key))
             append_audit_entry(
                 alert_id=alert_id,
                 engine_id=engine_id,
@@ -259,35 +324,37 @@ def add_alert(alert_id, engine_id, cycle, rul_prediction, anomaly_flag):
                 conn=conn
             )
         conn.commit()
-    except sqlite3.Error as e:
-        print(f"Database error: {e}")
-
     finally:
         conn.close()
 
-def get_unresolved_alerts():
+def get_unresolved_alerts(session_id: Optional[str] = None):
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    # Guarantee exactly one latest pending ticket per engine unit
-    cursor.execute("""
-        SELECT * FROM alerts a1 
-        WHERE a1.status = 'PENDING' 
-        AND a1.cycle = (
-            SELECT MAX(a2.cycle) FROM alerts a2 
-            WHERE a2.engine_id = a1.engine_id AND a2.status = 'PENDING'
-        )
-        ORDER BY a1.timestamp DESC
-    """)
+    if session_id:
+        cursor.execute("""
+            SELECT * FROM alerts 
+            WHERE status = 'PENDING' AND session_id = ?
+            ORDER BY timestamp DESC
+        """, (session_id,))
+    else:
+        cursor.execute("""
+            SELECT * FROM alerts 
+            WHERE status = 'PENDING' AND session_id != 'legacy'
+            ORDER BY timestamp DESC
+        """)
     rows = cursor.fetchall()
     conn.close()
     return [dict(r) for r in rows]
 
-def get_all_alerts():
+def get_all_alerts(include_archived: bool = False):
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM alerts ORDER BY timestamp DESC")
+    if include_archived:
+        cursor.execute("SELECT * FROM alerts ORDER BY timestamp DESC")
+    else:
+        cursor.execute("SELECT * FROM alerts WHERE status != 'ARCHIVED' ORDER BY timestamp DESC")
     rows = cursor.fetchall()
     conn.close()
     return [dict(r) for r in rows]
