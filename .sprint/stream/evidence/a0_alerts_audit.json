@@ -1,0 +1,282 @@
+[
+  {
+    "id": "test_alert_123",
+    "engine_id": 1,
+    "cycle": 150,
+    "rul_prediction": 45.2,
+    "status": "APPROVED",
+    "timestamp": "2026-07-03T11:41:12.178361"
+  },
+  {
+    "id": "alert_engine_1_cycle_163",
+    "engine_id": 1,
+    "cycle": 163,
+    "rul_prediction": 21.9,
+    "status": "REJECTED",
+    "timestamp": "2026-07-04T13:58:39.729992"
+  },
+  {
+    "id": "alert_engine_1_cycle_182",
+    "engine_id": 1,
+    "cycle": 182,
+    "rul_prediction": 9.4,
+    "status": "APPROVED",
+    "timestamp": "2026-07-04T13:58:39.747490"
+  },
+  {
+    "id": "alert_engine_24_cycle_147",
+    "engine_id": 24,
+    "cycle": 147,
+    "rul_prediction": 2.7,
+    "status": "PENDING",
+    "timestamp": "2026-09-30T05:39:21.106475"
+  },
+  {
+    "id": "alert_engine_3_cycle_125",
+    "engine_id": 3,
+    "cycle": 40,
+    "rul_prediction": 35.0,
+    "status": "PENDING",
+    "timestamp": "2026-10-07T06:27:50.936099"
+  },
+  {
+    "id": "alert_engine_3_cycle_126",
+    "engine_id": 3,
+    "cycle": 126,
+    "rul_prediction": 45.6,
+    "status": "APPROVED",
+    "timestamp": "2026-09-30T06:21:47.735179"
+  },
+  {
+    "id": "alert_engine_17_cycle_165",
+    "engine_id": 17,
+    "cycle": 165,
+    "rul_prediction": 43.0,
+    "status": "PENDING",
+    "timestamp": "2026-09-30T10:38:33.068385"
+  },
+  {
+    "id": "alert_engine_18_cycle_133",
+    "engine_id": 18,
+    "cycle": 133,
+    "rul_prediction": 48.7,
+    "status": "PENDING",
+    "timestamp": "2026-09-30T10:38:33.085659"
+  },
+  {
+    "id": "alert_engine_20_cycle_184",
+    "engine_id": 20,
+    "cycle": 184,
+    "rul_prediction": 11.9,
+    "status": "PENDING",
+    "timestamp": "2026-09-30T10:38:33.123255"
+  },
+  {
+    "id": "alert_engine_31_cycle_196",
+    "engine_id": 31,
+    "cycle": 196,
+    "rul_prediction": 11.3,
+    "status": "PENDING",
+    "timestamp": "2026-09-30T10:38:33.311892"
+  },
+  {
+    "id": "alert_engine_32_cycle_145",
+    "engine_id": 32,
+    "cycle": 145,
+    "rul_prediction": 41.1,
+    "status": "PENDING",
+    "timestamp": "2026-09-30T10:38:33.333094"
+  },
+  {
+    "id": "alert_engine_34_cycle_203",
+    "engine_id": 34,
+    "cycle": 203,
+    "rul_prediction": 3.1,
+    "status": "PENDING",
+    "timestamp": "2026-09-30T10:38:33.401216"
+  },
+  {
+    "id": "alert_engine_35_cycle_198",
+    "engine_id": 35,
+    "cycle": 198,
+    "rul_prediction": 4.9,
+    "status": "PENDING",
+    "timestamp": "2026-09-30T10:38:33.423297"
+  },
+  {
+    "id": "alert_engine_36_cycle_126",
+    "engine_id": 36,
+    "cycle": 126,
+    "rul_prediction": 10.1,
+    "status": "PENDING",
+    "timestamp": "2026-09-30T10:38:33.447152"
+  },
+  {
+    "id": "alert_engine_37_cycle_121",
+    "engine_id": 37,
+    "cycle": 121,
+    "rul_prediction": 38.2,
+    "status": "PENDING",
+    "timestamp": "2026-09-30T10:38:33.467825"
+  },
+  {
+    "id": "alert_engine_40_cycle_133",
+    "engine_id": 40,
+    "cycle": 133,
+    "rul_prediction": 43.0,
+    "status": "PENDING",
+    "timestamp": "2026-09-30T10:38:33.541838"
+  },
+  {
+    "id": "test_audit_engine_1",
+    "engine_id": 1,
+    "cycle": 50,
+    "rul_prediction": 45.0,
+    "status": "APPROVED",
+    "timestamp": "2026-10-07T06:24:49.987471"
+  },
+  {
+    "id": "test_audit_evidence_1",
+    "engine_id": 1,
+    "cycle": 50,
+    "rul_prediction": 45.0,
+    "status": "APPROVED",
+    "timestamp": "2026-10-07T06:25:09.483565"
+  },
+  {
+    "id": "test_t5_2dd0a444",
+    "engine_id": 9999,
+    "cycle": 40,
+    "rul_prediction": 35.0,
+    "status": "APPROVED",
+    "timestamp": "2026-10-07T06:29:28.812942"
+  },
+  {
+    "id": "alert_engine_10001_cycle_5",
+    "engine_id": 10001,
+    "cycle": 6,
+    "rul_prediction": 42.0,
+    "status": "PENDING",
+    "timestamp": "2026-10-07T06:36:32.055254"
+  },
+  {
+    "id": "alert_engine_279466_cycle_5",
+    "engine_id": 279466,
+    "cycle": 5,
+    "rul_prediction": 45.0,
+    "status": "PENDING",
+    "timestamp": "2026-10-07T06:37:56.818231"
+  },
+  {
+    "id": "test_persist_t1",
+    "engine_id": 7777,
+    "cycle": 10,
+    "rul_prediction": 45.0,
+    "status": "PENDING",
+    "timestamp": "2026-10-08T08:47:26.802279"
+  },
+  {
+    "id": "alert_engine_83684_cycle_3",
+    "engine_id": 83684,
+    "cycle": 3,
+    "rul_prediction": 52.0,
+    "status": "PENDING",
+    "timestamp": "2026-10-07T07:09:22.358086"
+  },
+  {
+    "id": "alert_engine_33398_cycle_5",
+    "engine_id": 33398,
+    "cycle": 5,
+    "rul_prediction": 52.0,
+    "status": "PENDING",
+    "timestamp": "2026-10-07T07:10:16.706989"
+  },
+  {
+    "id": "alert_engine_33847_cycle_5",
+    "engine_id": 33847,
+    "cycle": 5,
+    "rul_prediction": 52.0,
+    "status": "PENDING",
+    "timestamp": "2026-10-07T07:10:36.140399"
+  },
+  {
+    "id": "alert_engine_33000_cycle_5",
+    "engine_id": 33000,
+    "cycle": 5,
+    "rul_prediction": 52.0,
+    "status": "PENDING",
+    "timestamp": "2026-10-07T07:14:30.183240"
+  },
+  {
+    "id": "alert_engine_93049_cycle_5",
+    "engine_id": 93049,
+    "cycle": 5,
+    "rul_prediction": 52.0,
+    "status": "PENDING",
+    "timestamp": "2026-10-07T07:16:32.081306"
+  },
+  {
+    "id": "alert_engine_39055_cycle_5",
+    "engine_id": 39055,
+    "cycle": 5,
+    "rul_prediction": 52.0,
+    "status": "PENDING",
+    "timestamp": "2026-10-08T06:58:29.165962"
+  },
+  {
+    "id": "alert_engine_17882_cycle_5",
+    "engine_id": 17882,
+    "cycle": 5,
+    "rul_prediction": 52.0,
+    "status": "PENDING",
+    "timestamp": "2026-10-08T06:58:41.409065"
+  },
+  {
+    "id": "alert_engine_77114_cycle_5",
+    "engine_id": 77114,
+    "cycle": 5,
+    "rul_prediction": 52.0,
+    "status": "PENDING",
+    "timestamp": "2026-10-08T08:05:24.743960"
+  },
+  {
+    "id": "alert_engine_2_cycle_81",
+    "engine_id": 2,
+    "cycle": 91,
+    "rul_prediction": 31.8,
+    "status": "PENDING",
+    "timestamp": "2026-10-08T09:36:59.501034"
+  },
+  {
+    "id": "alert_engine_6_cycle_85",
+    "engine_id": 6,
+    "cycle": 105,
+    "rul_prediction": 9.4,
+    "status": "PENDING",
+    "timestamp": "2026-10-08T09:36:59.675983"
+  },
+  {
+    "id": "alert_engine_17957_cycle_5",
+    "engine_id": 17957,
+    "cycle": 5,
+    "rul_prediction": 52.0,
+    "status": "PENDING",
+    "timestamp": "2026-10-08T08:18:54.730137"
+  },
+  {
+    "id": "test_pytest_123",
+    "engine_id": 1,
+    "cycle": 100,
+    "rul_prediction": 50.0,
+    "status": "APPROVED",
+    "timestamp": "2026-10-08T08:47:26.776926"
+  },
+  {
+    "id": "alert_engine_28292_cycle_5",
+    "engine_id": 28292,
+    "cycle": 5,
+    "rul_prediction": 52.0,
+    "status": "PENDING",
+    "timestamp": "2026-10-08T08:47:26.818671"
+  }
+]
