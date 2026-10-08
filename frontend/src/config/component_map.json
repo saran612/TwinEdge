@@ -1,87 +1,87 @@
 {
-  "description": "Engineering assumption: NASA C-MAPSS FD001 sensor-to-turbofan-component attribution map. Tagged ASSUMED per Honesty Rule H3.",
+  "description": "Engineering assumption: NASA C-MAPSS FD001 sensor-to-turbofan-component attribution map. Tagged ASSUMED per Honesty Rule H3. Anchors positioned inside model bounding box [-1.60..1.41, -1.15..1.15, -1.25..1.43] derived from geometry mesh clusters.",
   "components": [
     {
       "id": "fan",
       "name": "Fan & Bypass Duct",
-      "mesh_keywords": ["fan", "blade", "inner duct"],
+      "mesh_keywords": ["fan_ring", "fan blades", "inner duct", "outer duct"],
       "sensors": ["s_8", "s_13", "s_15"],
       "modeled_fault": false,
       "description": "Low-pressure single-stage fan generating forward bypass thrust.",
-      "anchor_position": [-1.8, 0, 0]
+      "anchor_position": [0.632, -0.022, 0.259]
     },
     {
       "id": "lpc",
       "name": "Low Pressure Compressor (LPC)",
-      "mesh_keywords": ["compressor", "booster"],
+      "mesh_keywords": ["compressor casing", "booster"],
       "sensors": ["s_2"],
       "modeled_fault": false,
       "description": "Multi-stage booster compressor driven by low-pressure shaft.",
-      "anchor_position": [-1.1, 0, 0]
+      "anchor_position": [-0.459, 0.148, -0.468]
     },
     {
       "id": "hpc",
       "name": "High Pressure Compressor (HPC)",
-      "mesh_keywords": ["hpc", "compressor"],
+      "mesh_keywords": ["hpc"],
       "sensors": ["s_3", "s_7", "s_11"],
       "modeled_fault": true,
       "fault_mode_note": "Primary degradation mode modeled in C-MAPSS FD001 (blade erosion & clearance wear).",
       "description": "High-pressure multi-stage axial compressor driven by HP turbine.",
-      "anchor_position": [-0.3, 0, 0]
+      "anchor_position": [-0.032, 0.066, -0.221]
     },
     {
       "id": "combustor",
       "name": "Combustor",
-      "mesh_keywords": ["combustor", "chamber"],
+      "mesh_keywords": ["flame", "combustor"],
       "sensors": ["s_12"],
       "modeled_fault": false,
       "description": "Annular combustion chamber with fuel injection nozzles.",
-      "anchor_position": [0.4, 0, 0]
+      "anchor_position": [-0.995, 0.341, -0.532]
     },
     {
       "id": "hpt",
       "name": "High Pressure Turbine (HPT)",
-      "mesh_keywords": ["hpt", "turbine"],
+      "mesh_keywords": ["hpt", "turbine disc"],
       "sensors": ["s_20"],
       "modeled_fault": false,
       "description": "Single-stage high-pressure turbine extracting energy to drive HPC.",
-      "anchor_position": [0.9, 0, 0]
+      "anchor_position": [-0.967, 0.229, -0.814]
     },
     {
       "id": "lpt",
       "name": "Low Pressure Turbine (LPT)",
-      "mesh_keywords": ["lpt", "turbine blades low pressure"],
+      "mesh_keywords": ["rear stators", "lpt"],
       "sensors": ["s_4", "s_21"],
       "modeled_fault": false,
       "description": "Multi-stage low-pressure turbine extracting energy to drive Fan & LPC.",
-      "anchor_position": [1.5, 0, 0]
+      "anchor_position": [0.214, -0.008, -0.196]
     },
     {
       "id": "nozzle",
       "name": "Core Exhaust Nozzle",
-      "mesh_keywords": ["nozzle", "cone", "exhaust"],
+      "mesh_keywords": ["exhaust duct", "nose cone"],
       "sensors": [],
       "modeled_fault": false,
       "description": "Convergent core exhaust nozzle directing high-speed jet gas.",
-      "anchor_position": [2.2, 0, 0]
+      "anchor_position": [0.301, 0.028, 0.047]
     },
     {
       "id": "hp_spool",
       "name": "High Pressure Spool & Shaft",
-      "mesh_keywords": ["drive shaft", "gear", "bevel"],
+      "mesh_keywords": ["bevel gear", "internal gear box"],
       "sensors": ["s_9", "s_14"],
       "modeled_fault": false,
       "description": "High-speed rotating spool connecting HPT to HPC.",
-      "anchor_position": [0.3, -0.4, 0]
+      "anchor_position": [0.198, 0.019, -0.026]
     },
     {
       "id": "lp_spool",
       "name": "Low Pressure Spool & Shaft",
-      "mesh_keywords": ["shaft", "chamfer"],
+      "mesh_keywords": ["drive shaft", "chamfercyl"],
       "sensors": ["s_8", "s_13"],
       "modeled_fault": false,
       "description": "Concentric inner drive shaft connecting LPT to Fan and LPC.",
-      "anchor_position": [0.1, -0.6, 0]
+      "anchor_position": [-0.097, 0.067, -0.227]
     }
   ]
 }
