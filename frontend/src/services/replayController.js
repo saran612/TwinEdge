@@ -1,4 +1,4 @@
-import replayEnginesData from '../../public/offline/replay_engines.json';
+import replayEnginesData from '../offline/replay_engines.json';
 
 /**
  * ReplayController manages offline playback of bundled C-MAPSS traces.
@@ -12,16 +12,30 @@ export class ReplayController {
   }
 
   getEnginesList() {
-    return this.engines.map((e) => ({
-      id: e.engine_id,
-      split: e.split, // "HELD-OUT VALIDATION" | "TEST"
-      totalCycles: e.total_cycles,
-      healthyBaseline: e.healthy_baseline,
-    }));
+    return this.engines.map((e) => {
+      const splitPrefix = e.split === 'HELD-OUT VALIDATION' ? 'VAL' : 'TEST';
+      const key = `${splitPrefix}-${String(e.engine_id).padStart(3, '0')}`;
+      return {
+        id: e.engine_id,
+        key,
+        displayLabel: key,
+        split: e.split, // "HELD-OUT VALIDATION" | "TEST"
+        totalCycles: e.total_cycles,
+        healthyBaseline: e.healthy_baseline,
+      };
+    });
   }
 
-  getEngine(engineId) {
-    const match = this.engines.find((e) => e.engine_id === Number(engineId));
+  getEngine(engineIdentifier) {
+    if (typeof engineIdentifier === 'string' && engineIdentifier.includes('-')) {
+      const [prefix, numStr] = engineIdentifier.split('-');
+      const splitTarget = prefix === 'VAL' ? 'HELD-OUT VALIDATION' : 'TEST';
+      const match = this.engines.find(
+        (e) => e.engine_id === Number(numStr) && e.split === splitTarget
+      );
+      if (match) return match;
+    }
+    const match = this.engines.find((e) => e.engine_id === Number(engineIdentifier));
     return match || this.engines[0];
   }
 

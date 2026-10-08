@@ -3,7 +3,7 @@
  * "No mock or synthetic values in Live/Replay views. API failure => explicit error state, never fake data."
  */
 
-export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+export const API_BASE = import.meta.env.VITE_API_URL || '';
 
 export class ApiError extends Error {
   constructor(message, status, detail) {

@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import MetricCard from '../components/common/MetricCard';
-import StatusBadge from '../components/common/StatusBadge';
-import ProvenanceTag from '../components/common/ProvenanceTag';
-import DataTable from '../components/common/DataTable';
+import { MetricCard, Chip, ProvenanceTag, Card, CardHeader, Button, TableShell, Input, Drawer } from '../components/ui';
 import ConfirmModal from '../components/common/ConfirmModal';
 import { api } from '../services/api';
 import { HEALTH_CONFIG } from '../config/rubrics';
@@ -15,18 +12,7 @@ import {
   Clock,
   UserCheck,
   ShieldAlert,
-  X,
-  Send,
 } from 'lucide-react';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  ReferenceLine,
-} from 'recharts';
 
 export default function AlertsPage() {
   const { dataSource, alerts, setAlerts, setPendingAlertCount } = useApp();
@@ -38,7 +24,6 @@ export default function AlertsPage() {
   const [decisionAction, setDecisionAction] = useState('approve');
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState('ALL');
-  const [lastAuditResult, setLastAuditResult] = useState(null);
   const [signoffError, setSignoffError] = useState('');
 
   const fetchAlerts = async () => {
@@ -59,77 +44,86 @@ export default function AlertsPage() {
     fetchAlerts();
   }, []);
 
-  const handleOpenSignoff = (alert, action) => {
-    setSelectedAlert(alert);
-    setDecisionAction(action);
+  const handleOpenSignoff = (alertItem, action) => {
     setSignoffError('');
+    if (!reviewerId.trim()) {
+      setSignoffError('Reviewer ID is required for audit trail sign-off.');
+      return;
+    }
+    if (action === 'reject' && !decisionNotes.trim()) {
+      setSignoffError('Decision notes are mandatory when rejecting an alert.');
+      return;
+    }
+    setDecisionAction(action);
     setIsConfirmOpen(true);
   };
 
   const handleExecuteSignoff = async () => {
-    if (!reviewerId.trim()) {
-      setSignoffError('Reviewer ID is required.');
-      return;
-    }
-    if (decisionAction === 'reject' && !decisionNotes.trim()) {
-      setSignoffError('Notes are strictly required when rejecting an alert.');
-      return;
-    }
-
+    if (!selectedAlert) return;
     try {
-      const res = await api.postSignoff(selectedAlert.id, {
-        action: decisionAction,
+      await api.signoffAlert(selectedAlert.id, {
         reviewer_id: reviewerId.trim(),
+        action: decisionAction,
         notes: decisionNotes.trim(),
       });
-      setLastAuditResult(res.audit_entry);
       setIsConfirmOpen(false);
+      setSelectedAlert(null);
       setDecisionNotes('');
       fetchAlerts();
     } catch (err) {
-      setSignoffError(err.message);
+      setSignoffError(err.message || 'Failed to submit sign-off');
+      setIsConfirmOpen(false);
     }
   };
-
-  // Metrics
-  const pendingCount = alerts.filter((a) => a.status === 'PENDING').length;
-  const approvedCount = alerts.filter((a) => a.status === 'APPROVED').length;
-  const rejectedCount = alerts.filter((a) => a.status === 'REJECTED').length;
 
   const filteredAlerts = alerts.filter((a) => {
     if (statusFilter === 'ALL') return true;
     return a.status === statusFilter;
   });
 
+  const pendingCount = alerts.filter((a) => a.status === 'PENDING').length;
+  const approvedCount = alerts.filter((a) => a.status === 'APPROVED').length;
+  const rejectedCount = alerts.filter((a) => a.status === 'REJECTED').length;
+
   const columns = [
-    { field: 'id', header: 'ALERT ID', width: '15%' },
-    { field: 'engine_id', header: 'ENGINE', width: '10%' },
-    { field: 'cycle', header: 'CYCLE', width: '10%' },
+    {
+      field: 'id',
+      header: 'Alert ID',
+      width: '18%',
+      render: (val) => <span className="font-mono text-xs">{val.slice(0, 8)}...</span>,
+    },
+    {
+      field: 'engine_id',
+      header: 'Engine ID',
+      width: '14%',
+      render: (val) => <span className="font-mono font-semibold">#{String(val).padStart(3, '0')}</span>,
+    },
+    { field: 'cycle', header: 'Cycle', width: '12%' },
     {
       field: 'rul_prediction',
-      header: 'PRED RUL',
-      width: '12%',
-      render: (val) => `${val} cyc`,
+      header: 'RUL projection',
+      width: '16%',
+      render: (val) => `${val} cycles`,
     },
     {
       field: 'status',
-      header: 'STATUS',
-      width: '15%',
-      render: (val) => <StatusBadge status={val} />,
+      header: 'Status band',
+      width: '16%',
+      render: (val) => <Chip status={val} />,
     },
-    { field: 'reviewer_id', header: 'REVIEWER', width: '15%' },
-    { field: 'timestamp', header: 'RAISED AT', width: '23%' },
+    { field: 'reviewer_id', header: 'Reviewer', width: '14%' },
+    { field: 'timestamp', header: 'Raised at', width: '22%' },
   ];
 
   return (
-    <div className="flex flex-col h-full gap-4 select-none">
+    <div className="flex flex-col h-full gap-6 select-none">
       {/* KPI Cards Header */}
-      <div className="grid grid-cols-4 gap-3">
-        <MetricCard label="Pending Alerts" value={pendingCount} provenance="LIVE" />
+      <div className="grid grid-cols-4 gap-4">
+        <MetricCard label="Pending alerts" value={pendingCount} provenance="LIVE" />
         <MetricCard label="Approved" value={approvedCount} provenance="LIVE" />
         <MetricCard label="Rejected" value={rejectedCount} provenance="LIVE" />
         <MetricCard
-          label="Gating Policy"
+          label="Gating policy"
           value={`T<${HEALTH_CONFIG.ALERT_THRESHOLD_T}, K=${HEALTH_CONFIG.ALERT_SUSTAINED_K}`}
           provenance="STATIC"
           tooltip="Requires 3 consecutive cycles with RUL < 60 to raise an alert."
@@ -139,23 +133,25 @@ export default function AlertsPage() {
       {/* Main Content Area */}
       <div className="flex-1 flex gap-4 min-h-0">
         {/* Table View */}
-        <div className="flex-1 flex flex-col bg-slate-900 border border-slate-800 rounded shadow-md overflow-hidden">
-          <div className="p-3 border-b border-slate-800 bg-slate-950/40 flex items-center justify-between">
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex items-center justify-between mb-3 px-1">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
-                Fleet Alerts Queue
+              <span className="text-base font-semibold text-text-main">
+                Fleet alerts queue
               </span>
               <ProvenanceTag type="LIVE" />
             </div>
 
-            <div className="flex items-center gap-2 text-xs font-mono">
-              <span className="text-slate-400">Filter:</span>
+            <div className="flex items-center gap-1.5 text-xs bg-surface-2 p-1 rounded-md border border-border">
+              <span className="text-text-muted px-2">Filter:</span>
               {['ALL', 'PENDING', 'APPROVED', 'REJECTED'].map((st) => (
                 <button
                   key={st}
                   onClick={() => setStatusFilter(st)}
-                  className={`px-2 py-0.5 rounded ${
-                    statusFilter === st ? 'bg-indigo-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+                  className={`px-2.5 py-1 rounded-sm text-xs font-medium transition-colors cursor-pointer ${
+                    statusFilter === st
+                      ? 'bg-accent text-on-accent font-semibold shadow-xs'
+                      : 'text-text-2 hover:text-text-main'
                   }`}
                 >
                   {st}
@@ -165,7 +161,7 @@ export default function AlertsPage() {
           </div>
 
           <div className="flex-1 overflow-hidden">
-            <DataTable
+            <TableShell
               columns={columns}
               data={filteredAlerts}
               keyField="id"
@@ -173,127 +169,122 @@ export default function AlertsPage() {
               selectedKey={selectedAlert?.id}
               exportFileName="twinedge_alerts.csv"
               emptyMessage="No alerts logged in the system."
+              isLoading={loading}
             />
           </div>
         </div>
 
         {/* Detail & Sign-off Drawer */}
         {selectedAlert && (
-          <div className="w-96 bg-slate-900 border border-slate-800 rounded shadow-xl flex flex-col overflow-hidden animate-in slide-in-from-right-4 duration-150">
-            <div className="p-3 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Bell className="w-4 h-4 text-rose-400" />
-                <span className="text-xs font-bold text-white uppercase font-mono">
-                  Alert #{selectedAlert.id.slice(0, 8)}
-                </span>
-              </div>
-              <button
-                onClick={() => setSelectedAlert(null)}
-                className="text-slate-400 hover:text-white p-1"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs text-slate-300">
+          <Drawer
+            isOpen={Boolean(selectedAlert)}
+            onClose={() => setSelectedAlert(null)}
+            title={`Alert #${selectedAlert.id.slice(0, 8)}`}
+            width="max-w-md"
+          >
+            <div className="space-y-5">
               <div className="space-y-1">
-                <span className="text-slate-400 text-[11px]">Engine & Cycle</span>
-                <div className="font-mono text-base font-bold text-white">
+                <span className="text-xs text-text-muted">Engine & cycle</span>
+                <div className="font-mono text-base font-semibold text-text-main">
                   Engine #{selectedAlert.engine_id} &middot; Cycle {selectedAlert.cycle}
                 </div>
-                <div className="text-slate-400 text-[11px]">
-                  RUL Prediction: <strong className="text-rose-300 font-mono">{selectedAlert.rul_prediction} cycles</strong>
+                <div className="text-xs text-text-2">
+                  RUL prediction: <strong className="text-status-critical-text font-mono">{selectedAlert.rul_prediction} cycles</strong>
                 </div>
               </div>
 
               {/* Templated Work Order Suggestion */}
-              <div className="p-3 rounded bg-slate-950 border border-slate-800 space-y-1.5">
-                <div className="flex items-center justify-between text-[11px] font-semibold text-slate-400 uppercase">
-                  <span>Work-Order Template</span>
+              <div className="p-4 rounded-md bg-surface-2 border border-border space-y-2">
+                <div className="flex items-center justify-between text-xs font-semibold text-text-2">
+                  <span>Work-order template</span>
                   <ProvenanceTag type="STATIC" />
                 </div>
-                <div className="font-mono text-[11px] text-slate-300 bg-slate-900 p-2 rounded border border-slate-800">
+                <div className="font-mono text-xs text-text-main bg-surface p-3 rounded-md border border-border">
                   DISPATCH: Borescope inspection on HPC stage 3 stators and blade tip clearance.
                 </div>
-                <p className="text-[10px] text-slate-500">
+                <p className="text-xs text-text-muted">
                   Prototype template suggestion. Requires formal sign-off triage before execution.
                 </p>
               </div>
 
               {/* Reviewer ID & Action Contract */}
-              <div className="space-y-3 pt-2 border-t border-slate-800">
+              <div className="space-y-4 pt-3 border-t border-border">
                 <div>
-                  <label className="text-slate-300 font-medium block mb-1">
-                    Reviewer ID <span className="text-rose-400">*</span>
+                  <label className="text-xs font-medium text-text-2 block mb-1.5">
+                    Reviewer ID <span className="text-status-critical-text">*</span>
                   </label>
-                  <input
+                  <Input
                     type="text"
                     value={reviewerId}
                     onChange={(e) => setReviewerId(e.target.value)}
                     placeholder="e.g. MRO-TECH-042"
-                    className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-slate-100 font-mono text-xs focus:border-indigo-500"
+                    className="w-full font-mono text-xs"
                   />
-                  <span className="text-[10px] text-slate-500 mt-0.5 block">
+                  <span className="text-xs text-text-muted mt-1 block">
                     Reviewer ID is recorded, not licence-verified (Rule H4).
                   </span>
                 </div>
 
                 <div>
-                  <label className="text-slate-300 font-medium block mb-1">Decision Notes</label>
+                  <label className="text-xs font-medium text-text-2 block mb-1.5">
+                    Decision notes
+                  </label>
                   <textarea
-                    rows={2}
+                    rows={3}
                     value={decisionNotes}
                     onChange={(e) => setDecisionNotes(e.target.value)}
                     placeholder="Required if rejecting alert..."
-                    className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-slate-100 font-mono text-xs focus:border-indigo-500"
+                    className="w-full bg-surface border border-border rounded-md p-3 text-text-main font-mono text-xs focus:outline-none focus:border-accent"
                   />
                 </div>
 
                 {signoffError && (
-                  <div className="p-2 rounded bg-rose-950/60 border border-rose-800 text-rose-300 text-[11px]">
+                  <div className="p-3 rounded-md bg-status-critical-bg border border-status-critical-border text-status-critical-text text-xs">
                     {signoffError}
                   </div>
                 )}
 
                 {/* Sign-off Actions */}
-                {dataSource !== 'Live' ? (
-                  <div className="p-2.5 rounded bg-slate-950 border border-slate-800 text-[11px] text-amber-300 italic">
+                {dataSource !== 'LIVE' ? (
+                  <div className="p-3 rounded-md bg-surface-2 border border-border text-xs text-text-muted italic">
                     Sign-off contract is active in Live source only. Currently in {dataSource} mode.
                   </div>
                 ) : selectedAlert.status !== 'PENDING' ? (
-                  <div className="p-2.5 rounded bg-slate-950 border border-slate-800 text-[11px] text-emerald-400">
+                  <div className="p-3 rounded-md bg-status-healthy-bg border border-status-healthy-border text-xs text-status-healthy-text font-medium">
                     Alert already finalized with status: <strong>{selectedAlert.status}</strong>
                   </div>
                 ) : (
-                  <div className="flex gap-2 pt-2">
-                    <button
+                  <div className="flex gap-3 pt-2">
+                    <Button
+                      variant="primary"
                       onClick={() => handleOpenSignoff(selectedAlert, 'approve')}
-                      className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded font-medium transition-colors flex items-center justify-center gap-1.5"
+                      className="flex-1"
                     >
-                      <CheckCircle className="w-3.5 h-3.5" />
+                      <CheckCircle className="w-4 h-4" />
                       <span>Approve</span>
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="danger"
                       onClick={() => handleOpenSignoff(selectedAlert, 'reject')}
-                      className="flex-1 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded font-medium transition-colors flex items-center justify-center gap-1.5"
+                      className="flex-1"
                     >
-                      <XCircle className="w-3.5 h-3.5" />
+                      <XCircle className="w-4 h-4" />
                       <span>Reject</span>
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>
             </div>
-          </div>
+          </Drawer>
         )}
       </div>
 
       {/* Confirmation Modal */}
       <ConfirmModal
         isOpen={isConfirmOpen}
-        title={`Confirm Alert ${decisionAction.toUpperCase()}`}
+        title={`Confirm alert ${decisionAction}`}
         message={`Are you sure you want to ${decisionAction} alert for Engine #${selectedAlert?.engine_id}? This creates an immutable cryptographic audit entry.`}
-        confirmText={decisionAction === 'approve' ? 'Approve Alert' : 'Reject Alert'}
+        confirmText={decisionAction === 'approve' ? 'Approve alert' : 'Reject alert'}
         confirmVariant={decisionAction === 'approve' ? 'primary' : 'danger'}
         onConfirm={handleExecuteSignoff}
         onCancel={() => setIsConfirmOpen(false)}

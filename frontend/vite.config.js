@@ -34,8 +34,35 @@ export default defineConfig({
     },
   ],
   server: {
+    host: '0.0.0.0',
+    port: 5173,
+    strictPort: true,
     hmr: {
       overlay: false,
+    },
+    cors: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+      '/predict': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/health': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/telemetry': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/alerts': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
     },
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin',

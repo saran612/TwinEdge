@@ -1,39 +1,43 @@
 import React from 'react';
-import { useApp, DATA_SOURCES } from '../../context/AppContext';
 import {
-  LayoutDashboard,
-  Box,
   Activity,
-  Bell,
-  ShieldCheck,
-  FlaskConical,
-  Cpu,
-  Info,
+  Layers,
+  FileText,
+  AlertTriangle,
+  Play,
+  RotateCcw,
+  CheckCircle,
+  Clock,
+  Sparkles,
   Sliders,
-  ChevronDown,
+  ShieldAlert,
   Sun,
   Moon,
+  ChevronDown,
 } from 'lucide-react';
+import { useApp } from '../../context/AppContext';
+import { DATA_SOURCES } from '../../context/AppContext';
 import RubricsDrawer from '../common/RubricsDrawer';
-import EngineSplitBadge from '../common/EngineSplitBadge';
 import { HEALTH_CONFIG } from '../../config/rubrics';
+import { Button, IconButton, Select } from '../ui';
 
 export const NAV_PAGES = [
-  { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-  { id: 'twin', label: 'Digital Twin', icon: Box },
-  { id: 'telemetry', label: 'Telemetry', icon: Activity },
-  { id: 'alerts', label: 'Alerts', icon: Bell, badge: true },
-  { id: 'audit', label: 'Audit', icon: ShieldCheck },
-  { id: 'simulation', label: 'Simulation Lab', icon: FlaskConical },
-  { id: 'edge', label: 'Edge & Model', icon: Cpu },
-  { id: 'about', label: 'Method & Limits', icon: Info },
+  { id: 'overview', label: 'Fleet Overview', icon: Activity },
+  { id: 'twin', label: 'Digital Twin 3D', icon: Layers },
+  { id: 'telemetry', label: 'Telemetry & Health', icon: Activity },
+  { id: 'alerts', label: 'Alerts & Maintenance', icon: AlertTriangle, badge: true },
+  { id: 'model', label: 'Edge Model & Inference', icon: Sparkles },
+  { id: 'sim', label: 'Simulation Lab', icon: Play },
+  { id: 'method', label: 'Methodology & Claims', icon: FileText },
+  { id: 'audit', label: 'Model Audit & Governance', icon: ShieldAlert },
 ];
 
 export default function GlobalShell({ activePage, onNavigate, children }) {
   const {
     dataSource,
     setDataSource,
-    activeEngineId,
+    activeEngineKey,
+    setActiveEngineKey,
     setActiveEngineId,
     availableEngines,
     isRubricsOpen,
@@ -44,81 +48,117 @@ export default function GlobalShell({ activePage, onNavigate, children }) {
     toggleTheme,
   } = useApp();
 
-  const getPillStyle = (status) => {
-    switch (status) {
-      case 'OK':
-        return 'bg-emerald-950/60 text-emerald-400 border-emerald-800/80';
-      case 'DOWN':
-        return 'bg-rose-950/60 text-rose-400 border-rose-800/80';
-      default:
-        return 'bg-slate-900 text-slate-400 border-slate-800';
+  // Connectivity semantics per spec:
+  // Red only when the SELECTED data source cannot work;
+  // otherwise neutral ("not required in Replay") or amber for degraded-but-working.
+  const getPillStyle = (channel, status) => {
+    if (dataSource === DATA_SOURCES.REPLAY || dataSource === DATA_SOURCES.SIMULATION) {
+      if (channel === 'mqtt' || channel === 'influx') {
+        return {
+          classes: 'bg-surface-2 text-text-muted border-border',
+          dot: 'bg-text-muted',
+          label: 'Not required in replay',
+        };
+      }
     }
+
+    if (status === 'OK') {
+      return {
+        classes: 'bg-status-healthy-bg text-status-healthy-text border-status-healthy-border',
+        dot: 'bg-status-healthy-text',
+        label: 'Connected',
+      };
+    }
+
+    if (dataSource === DATA_SOURCES.LIVE && (channel === 'backend' || channel === 'mqtt')) {
+      return {
+        classes: 'bg-status-critical-bg text-status-critical-text border-status-critical-border',
+        dot: 'bg-status-critical-text',
+        label: 'Offline (Required)',
+      };
+    }
+
+    return {
+      classes: 'bg-status-degrading-bg text-status-degrading-text border-status-degrading-border',
+      dot: 'bg-status-degrading-text',
+      label: 'Degraded',
+    };
   };
 
+  const currentEngine = (availableEngines || []).find(
+    (e) => e.key === activeEngineKey || e.id === Number(activeEngineKey)
+  ) || availableEngines[0];
+
   return (
-    <div className="flex flex-col h-screen w-screen bg-slate-950 text-slate-100 overflow-hidden font-sans select-none">
+    <div className="flex flex-col h-screen w-screen bg-bg-app text-text-main overflow-hidden font-sans select-none">
       {/* Simulation Banner per Rule H5 */}
       {dataSource === DATA_SOURCES.SIMULATION && (
-        <div
-          data-testid="simulation-banner"
-          className="bg-amber-500/20 border-b border-amber-500/40 text-amber-300 px-4 py-1.5 text-xs font-mono font-medium flex items-center justify-between z-40"
-        >
+        <div className="bg-status-degrading-bg border-b border-status-degrading-border px-6 py-2 text-xs font-semibold text-status-degrading-text flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-            <span>SIMULATION MODE ACTIVE: Model response to synthetic perturbations — not engine physics.</span>
+            <span className="w-2 h-2 rounded-full bg-status-degrading-text animate-pulse"></span>
+            <span>SIMULATION LAB ACTIVE — Synthetic sensor injections running. Operational norms bypassed.</span>
           </div>
-          <span className="text-[10px] uppercase tracking-wider text-amber-400/80">Persistent Banner (H5)</span>
+          <button
+            onClick={() => setDataSource(DATA_SOURCES.REPLAY)}
+            className="hover:underline flex items-center gap-1 font-mono text-xs cursor-pointer"
+          >
+            <RotateCcw className="w-3 h-3" />
+            <span>Return to Replay</span>
+          </button>
         </div>
       )}
 
-      {/* Top Bar */}
-      <header className="h-14 border-b border-slate-800 bg-slate-950/90 backdrop-blur-md flex items-center justify-between px-4 z-30 shrink-0">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded bg-indigo-600 flex items-center justify-center font-bold font-mono text-white text-xs">
+      {/* Flight-Deck Header (Height: 64px) */}
+      <header className="h-16 border-b border-border bg-surface px-6 flex items-center justify-between shrink-0 z-20">
+        <div className="flex items-center gap-6">
+          {/* Logo & Product Name */}
+          <div className="flex items-center gap-3">
+            <div className="w-7 h-7 rounded-sm bg-accent flex items-center justify-center font-bold font-mono text-on-accent text-xs">
               TE
             </div>
-            <span className="font-semibold text-sm tracking-tight text-white">TwinEdge</span>
-            <span className="text-xs text-slate-500 font-mono hidden md:inline">| Aircraft MRO Digital Twin</span>
+            <div className="flex flex-col">
+              <span className="font-semibold text-base tracking-tight text-text-main leading-tight">TwinEdge</span>
+              <span className="text-[10px] text-text-muted font-mono tracking-wider uppercase">Aircraft MRO Digital Twin</span>
+            </div>
           </div>
 
-          <div className="h-4 w-px bg-slate-800 hidden md:block"></div>
+          <div className="h-5 w-px bg-border hidden md:block"></div>
 
-          {/* Engine Selector */}
+          {/* Engine Selector with split-aware unique identity */}
           <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400 uppercase font-mono">Engine</span>
-            <div className="relative">
-              <select
-                value={activeEngineId}
-                onChange={(e) => setActiveEngineId(Number(e.target.value))}
-                className="bg-slate-900 border border-slate-700 text-xs text-slate-200 font-mono rounded px-2.5 py-1 appearance-none pr-7 focus:outline-none focus:border-indigo-500 cursor-pointer"
+            <span className="text-xs text-text-muted font-sans font-medium">Engine</span>
+            <div className="w-44">
+              <Select
+                value={activeEngineKey || currentEngine?.key}
+                onChange={(e) => {
+                  const keyVal = e.target.value;
+                  setActiveEngineKey(keyVal);
+                  const eng = availableEngines.find((x) => x.key === keyVal);
+                  if (eng) setActiveEngineId(eng.id);
+                }}
+                className="h-8 text-xs font-mono"
               >
                 {(availableEngines || []).map((eng) => (
-                  <option key={`${eng.split}_${eng.id}`} value={eng.id}>
-                    #{String(eng.id).padStart(3, '0')} ({eng.split === 'HELD-OUT VALIDATION' ? 'HELD-OUT VAL' : eng.split})
+                  <option key={eng.key} value={eng.key}>
+                    {eng.displayLabel} ({eng.split === 'HELD-OUT VALIDATION' ? 'VAL' : 'TEST'})
                   </option>
                 ))}
-              </select>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2 top-2 pointer-events-none" />
+              </Select>
             </div>
-            {(() => {
-              const cur = (availableEngines || []).find((e) => e.id === activeEngineId);
-              return cur ? <EngineSplitBadge split={cur.split} /> : null;
-            })()}
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           {/* Data Source Switch */}
-          <div className="flex items-center bg-slate-900 border border-slate-800 rounded p-0.5 text-xs font-mono">
+          <div className="flex items-center bg-surface-2 border border-border rounded-md p-1 text-xs">
             {Object.values(DATA_SOURCES).map((src) => (
               <button
                 key={src}
                 onClick={() => setDataSource(src)}
-                className={`px-2.5 py-1 rounded transition-colors ${
+                className={`h-7 px-3 rounded-sm transition-colors text-xs font-medium cursor-pointer ${
                   dataSource === src
-                    ? 'bg-indigo-600 text-white font-semibold shadow-xs'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'bg-accent text-on-accent font-semibold shadow-xs'
+                    : 'text-text-2 hover:text-text-main'
                 }`}
               >
                 {src}
@@ -126,62 +166,58 @@ export default function GlobalShell({ activePage, onNavigate, children }) {
             ))}
           </div>
 
-          {/* Connectivity Pills */}
-          <div className="hidden lg:flex items-center gap-1.5 text-[10px] font-mono">
+          {/* Connectivity Status Pills */}
+          <div className="hidden lg:flex items-center gap-2 text-xs">
             {['backend', 'mqtt', 'influx', 'network'].map((k) => {
               const item = connectivity[k];
+              const pill = getPillStyle(k, item.status);
               return (
                 <div
                   key={k}
-                  className={`px-2 py-0.5 rounded border uppercase flex items-center gap-1 ${getPillStyle(
-                    item.status
-                  )}`}
-                  title={`${k.toUpperCase()}: ${item.status} (${item.detail || 'healthy'})`}
+                  className={`px-2.5 py-0.5 rounded-full border text-[11px] font-medium flex items-center gap-1.5 ${pill.classes}`}
+                  title={`${k.toUpperCase()}: ${item.status} (${pill.label})`}
                 >
-                  <span className={`w-1.5 h-1.5 rounded-full ${item.status === 'OK' ? 'bg-emerald-400' : 'bg-rose-400'}`}></span>
-                  <span>{k}</span>
+                  <span className={`w-1.5 h-1.5 rounded-full ${pill.dot}`}></span>
+                  <span className="capitalize">{k}</span>
                 </div>
               );
             })}
           </div>
 
           {/* Theme Toggle Button */}
-          <button
+          <IconButton
             id="theme-toggle-btn"
             onClick={toggleTheme}
-            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            ariaLabel={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            variant="secondary"
+            size="sm"
             title={`Current theme: ${theme}. Click to switch.`}
           >
             {theme === 'dark' ? (
-              <>
-                <Sun className="w-3.5 h-3.5 text-amber-400" />
-                <span className="hidden sm:inline">Light</span>
-              </>
+              <Sun className="w-4 h-4 text-status-degrading-text" />
             ) : (
-              <>
-                <Moon className="w-3.5 h-3.5 text-indigo-400" />
-                <span className="hidden sm:inline">Dark</span>
-              </>
+              <Moon className="w-4 h-4 text-accent" />
             )}
-          </button>
+          </IconButton>
 
           {/* Rubrics Button */}
-          <button
+          <Button
+            size="sm"
+            variant="secondary"
             onClick={() => setIsRubricsOpen(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+            className="text-xs"
           >
-            <Sliders className="w-3.5 h-3.5 text-indigo-400" />
+            <Sliders className="w-3.5 h-3.5 text-accent" />
             <span>Rubrics</span>
-          </button>
+          </Button>
         </div>
       </header>
 
       {/* Main Container */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left Nav */}
-        <aside className="w-56 border-r border-slate-800 bg-slate-950/60 flex flex-col shrink-0">
-          <nav className="p-3 space-y-1 flex-1 overflow-y-auto">
+        {/* Left Nav (Sidebar width: 240px) */}
+        <aside className="w-60 border-r border-border bg-surface flex flex-col shrink-0">
+          <nav className="p-4 space-y-1 flex-1 overflow-y-auto">
             {NAV_PAGES.map((page) => {
               const Icon = page.icon;
               const isActive = activePage === page.id;
@@ -189,18 +225,18 @@ export default function GlobalShell({ activePage, onNavigate, children }) {
                 <button
                   key={page.id}
                   onClick={() => onNavigate(page.id)}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded text-xs transition-colors ${
+                  className={`w-full h-11 flex items-center justify-between px-3.5 rounded-md text-sm transition-colors cursor-pointer select-none ${
                     isActive
-                      ? 'bg-indigo-950/60 text-white font-medium border border-indigo-700/60'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                      ? 'bg-selected-row text-accent font-semibold border-l-[3px] border-l-accent'
+                      : 'text-text-2 hover:text-text-main hover:bg-surface-2'
                   }`}
                 >
-                  <div className="flex items-center gap-2.5">
-                    <Icon className={`w-4 h-4 ${isActive ? 'text-indigo-400' : 'text-slate-500'}`} />
+                  <div className="flex items-center gap-3">
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-accent' : 'text-text-muted'}`} />
                     <span>{page.label}</span>
                   </div>
                   {page.badge && pendingAlertCount > 0 && (
-                    <span className="px-1.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-mono font-bold">
+                    <span className="px-2 py-0.5 rounded-full bg-status-critical-bg text-status-critical-text border border-status-critical-border text-xs font-semibold tabular-nums">
                       {pendingAlertCount}
                     </span>
                   )}
@@ -209,25 +245,25 @@ export default function GlobalShell({ activePage, onNavigate, children }) {
             })}
           </nav>
 
-          {/* Nav Footer */}
-          <div className="p-3 border-t border-slate-800 text-[11px] font-mono text-slate-500 space-y-1">
+          {/* Nav Footer Metadata */}
+          <div className="p-4 border-t border-border text-xs font-mono text-text-muted space-y-1.5 bg-surface-2/40">
             <div className="flex justify-between">
               <span>Model SHA:</span>
-              <span className="text-slate-400">{HEALTH_CONFIG.MODEL_SHA_PREFIX}</span>
+              <span className="text-text-2 font-medium">{HEALTH_CONFIG.MODEL_SHA_PREFIX}</span>
             </div>
             <div className="flex justify-between">
               <span>Dataset:</span>
-              <span className="text-slate-400">{HEALTH_CONFIG.DATASET_NAME}</span>
+              <span className="text-text-2 font-medium">{HEALTH_CONFIG.DATASET_NAME}</span>
             </div>
             <div className="flex justify-between">
               <span>Build:</span>
-              <span className="text-slate-400">{HEALTH_CONFIG.BUILD_VERSION}</span>
+              <span className="text-text-2 font-medium">{HEALTH_CONFIG.BUILD_VERSION}</span>
             </div>
           </div>
         </aside>
 
-        {/* Viewport content */}
-        <main className="flex-1 overflow-y-auto p-4 bg-slate-950">
+        {/* Viewport content with standard 24px padding */}
+        <main className="flex-1 overflow-y-auto p-6 bg-bg-app">
           {children}
         </main>
       </div>

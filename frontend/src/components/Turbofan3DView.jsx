@@ -314,18 +314,18 @@ export default function Turbofan3DView({
   };
 
   return (
-    <div className="relative w-full h-full flex flex-col bg-slate-100 rounded-2xl overflow-hidden border border-slate-300 shadow-sm">
+    <div className="relative w-full h-full flex flex-col bg-surface rounded-lg overflow-hidden border border-border shadow-sm">
       {/* Top Controls & Status Bar */}
       <div className="absolute top-4 left-4 right-4 z-20 flex flex-wrap items-center justify-between gap-4 pointer-events-none">
         {/* Left: Engine Selector & Status Pill */}
-        <div className="flex items-center gap-3 pointer-events-auto bg-white/90 backdrop-blur-md px-4 py-2 rounded-xl border border-slate-200 shadow-lg text-slate-800">
+        <div className="flex items-center gap-3 pointer-events-auto bg-surface/90 backdrop-blur-md px-4 py-2 rounded-md border border-border shadow-sm text-text">
           <div className="flex items-center gap-2">
-            <Cpu className="h-4 w-4 text-indigo-600" />
-            <span className="text-xs font-semibold text-slate-500">Digital Twin:</span>
+            <Cpu className="h-4 w-4 text-accent" />
+            <span className="text-xs font-semibold text-text-muted">Digital Twin:</span>
             <select
               value={selectedEngineId}
               onChange={(e) => onSelectEngine && onSelectEngine(parseInt(e.target.value))}
-              className="bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1 text-xs text-slate-900 font-bold focus:outline-none"
+              className="bg-surface-2 border border-border rounded-md px-2.5 py-1 text-xs text-text font-medium focus:outline-none focus:ring-2 focus:ring-accent"
             >
               <option value={3}>Engine #3 (Active Stream)</option>
               <option value={1}>Engine #1</option>
@@ -335,71 +335,71 @@ export default function Turbofan3DView({
             </select>
           </div>
 
-          <div className="h-4 w-px bg-slate-200" />
+          <div className="h-4 w-px bg-border" />
 
           {/* Real-time RUL Badge */}
           <div className="flex items-center gap-2">
-            <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Predicted RUL:</span>
-            <span className={`px-2 py-0.5 rounded text-xs font-bold font-mono border ${
+            <span className="text-xs text-text-muted uppercase tracking-wider font-semibold">Predicted RUL:</span>
+            <span className={`px-2 py-0.5 rounded-sm text-xs font-bold font-mono border ${
               isAnomaly 
-                ? 'bg-rose-50 text-rose-700 border-rose-300 animate-pulse' 
-                : 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                ? 'bg-[#FCE6E6] text-[#A31D1D] dark:bg-[#3A1515] dark:text-[#FF9B9B] border-transparent animate-pulse' 
+                : 'bg-[#E3F5EA] text-[#0B6B3A] dark:bg-[#12301F] dark:text-[#6EE7A0] border-transparent'
             }`}>
               {currentRUL} cycles
             </span>
           </div>
 
           {isAnomaly && (
-            <span className="flex items-center gap-1 text-[10px] font-bold uppercase text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-300">
-              <ShieldAlert className="h-3 w-3" /> Flagged for AME Inspection
+            <span className="flex items-center gap-1 text-xs font-medium uppercase text-[#8A4B00] bg-[#FDF0DC] dark:bg-[#3A2A0E] dark:text-[#FFC46B] px-2 py-0.5 rounded-sm">
+              <ShieldAlert className="h-3.5 w-3.5" /> Inspection required
             </span>
           )}
         </div>
 
         {/* Right: Camera Presets & Render Modes */}
-        <div className="flex items-center gap-2 pointer-events-auto bg-white/90 backdrop-blur-md p-1.5 rounded-xl border border-slate-200 shadow-lg text-slate-800">
+        <div className="flex items-center gap-2 pointer-events-auto bg-surface/90 backdrop-blur-md p-1.5 rounded-md border border-border shadow-sm text-text">
           <div className="flex items-center gap-1">
             <button
               onClick={() => setCameraPreset('iso')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                cameraView === 'iso' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                cameraView === 'iso' ? 'bg-accent text-on-accent shadow-sm' : 'text-text-2 hover:text-text hover:bg-surface-2'
               }`}
             >
               Isometric
             </button>
             <button
               onClick={() => setCameraPreset('front')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                cameraView === 'front' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                cameraView === 'front' ? 'bg-accent text-on-accent shadow-sm' : 'text-text-2 hover:text-text hover:bg-surface-2'
               }`}
             >
               Intake
             </button>
             <button
               onClick={() => setCameraPreset('side')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                cameraView === 'side' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                cameraView === 'side' ? 'bg-accent text-on-accent shadow-sm' : 'text-text-2 hover:text-text hover:bg-surface-2'
               }`}
             >
               Profile
             </button>
             <button
               onClick={() => setCameraPreset('exhaust')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                cameraView === 'exhaust' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                cameraView === 'exhaust' ? 'bg-accent text-on-accent shadow-sm' : 'text-text-2 hover:text-text hover:bg-surface-2'
               }`}
             >
               Exhaust
             </button>
           </div>
 
-          <div className="h-4 w-px bg-slate-200" />
+          <div className="h-4 w-px bg-border" />
 
           {/* Mode Toggles */}
           <button
             onClick={() => setIsWireframe(!isWireframe)}
-            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-              isWireframe ? 'bg-cyan-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+              isWireframe ? 'bg-accent text-on-accent shadow-sm' : 'text-text-2 hover:text-text hover:bg-surface-2'
             }`}
             title="CAD Wireframe Mode"
           >
@@ -407,8 +407,8 @@ export default function Turbofan3DView({
           </button>
           <button
             onClick={() => setIsXray(!isXray)}
-            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-              isXray ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+              isXray ? 'bg-accent text-on-accent shadow-sm' : 'text-text-2 hover:text-text hover:bg-surface-2'
             }`}
             title="X-Ray Casing Transparency"
           >
@@ -454,37 +454,37 @@ export default function Turbofan3DView({
 
       {/* Hotspots Component Sidebar Panel */}
       <div className="absolute top-20 right-4 z-20 w-80 space-y-2 pointer-events-auto">
-        <div className="bg-white/95 backdrop-blur-md p-4 rounded-2xl border border-slate-200 shadow-xl text-slate-800">
+        <div className="bg-surface/95 backdrop-blur-md p-5 rounded-lg border border-border shadow-sm text-text">
           <div className="flex items-center justify-between mb-3">
-            <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-              <Compass className="h-4 w-4 text-indigo-600" /> Turbofan Subsystem Sensors
+            <h4 className="text-xs font-semibold text-text uppercase tracking-wider flex items-center gap-2">
+              <Compass className="h-4 w-4 text-accent" /> Turbofan Subsystem Sensors
             </h4>
-            <span className="text-[10px] text-slate-500 font-mono">C-MAPSS FD001</span>
+            <span className="text-xs text-text-muted font-mono">C-MAPSS FD001</span>
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             {HOTSPOTS.map((hs) => {
               const isSelected = activeHotspot?.id === hs.id;
               return (
                 <button
                   key={hs.id}
                   onClick={() => setActiveHotspot(isSelected ? null : hs)}
-                  className={`w-full text-left p-2.5 rounded-xl border text-xs transition-all cursor-pointer flex flex-col gap-1 ${
+                  className={`w-full text-left p-3 rounded-md border text-xs transition-all cursor-pointer flex flex-col gap-1 ${
                     isSelected 
-                      ? 'bg-indigo-50 border-indigo-400 text-indigo-950 shadow-sm' 
-                      : 'bg-slate-50/80 border-slate-200/80 hover:border-slate-300 text-slate-700'
+                      ? 'bg-selected-row border-accent text-text shadow-sm' 
+                      : 'bg-surface-2 border-border hover:border-text-muted text-text-2'
                   }`}
                 >
-                  <div className="flex items-center justify-between font-semibold">
+                  <div className="flex items-center justify-between font-medium">
                     <span className="truncate">{hs.name}</span>
-                    <span className="text-[10px] text-indigo-600 font-mono">{hs.station}</span>
+                    <span className="text-xs text-accent font-mono">{hs.station}</span>
                   </div>
                   {isSelected && (
-                    <div className="mt-2 pt-2 border-t border-indigo-200 text-[11px] text-slate-600 space-y-1">
+                    <div className="mt-2 pt-2 border-t border-border text-xs text-text-2 space-y-1">
                       <p className="leading-relaxed">{hs.description}</p>
-                      <div className="flex items-center justify-between text-indigo-700 font-mono pt-1">
+                      <div className="flex items-center justify-between text-accent font-mono pt-1">
                         <span>{hs.sensorName}</span>
-                        <span className="font-bold">{hs.nominal}</span>
+                        <span className="font-semibold">{hs.nominal}</span>
                       </div>
                     </div>
                   )}
@@ -498,25 +498,25 @@ export default function Turbofan3DView({
       {/* Bottom Animation & Spool Controls Bar */}
       <div className="absolute bottom-4 left-4 right-4 z-20 flex flex-wrap items-center justify-between gap-4 pointer-events-none">
         {/* Play / Pause / Speed Controller */}
-        <div className="flex items-center gap-3 pointer-events-auto bg-white/90 backdrop-blur-md px-4 py-2.5 rounded-xl border border-slate-200 shadow-lg text-slate-800">
+        <div className="flex items-center gap-3 pointer-events-auto bg-surface/90 backdrop-blur-md px-4 py-2 rounded-md border border-border shadow-sm text-text">
           <button
             onClick={() => setIsPlaying(!isPlaying)}
-            className="p-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-all cursor-pointer shadow-sm"
+            className="p-2 rounded-md bg-accent hover:opacity-90 text-on-accent transition-all cursor-pointer shadow-sm"
             title={isPlaying ? 'Pause Spool Rotation' : 'Spin Engine Spools'}
           >
             {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
           </button>
 
           <div className="flex items-center gap-1.5">
-            <span className="text-xs font-semibold text-slate-500">N1 Spool Speed:</span>
+            <span className="text-xs font-semibold text-text-muted">N1 Spool Speed:</span>
             {[0.5, 1.0, 2.0].map((spd) => (
               <button
                 key={spd}
                 onClick={() => setPlaybackSpeed(spd)}
-                className={`px-2 py-0.5 rounded text-xs font-mono font-bold transition-all cursor-pointer ${
+                className={`px-2 py-0.5 rounded-sm text-xs font-mono font-medium transition-all cursor-pointer ${
                   playbackSpeed === spd 
-                    ? 'bg-indigo-50 text-indigo-600 border border-indigo-300' 
-                    : 'text-slate-500 hover:text-slate-800'
+                    ? 'bg-selected-row text-accent border border-accent' 
+                    : 'text-text-muted hover:text-text'
                 }`}
               >
                 {spd}x
@@ -524,12 +524,12 @@ export default function Turbofan3DView({
             ))}
           </div>
 
-          <div className="h-4 w-px bg-slate-200" />
+          <div className="h-4 w-px bg-border" />
 
           {/* Quick Camera Reset */}
           <button
             onClick={() => setCameraPreset('iso')}
-            className="flex items-center gap-1.5 text-xs text-slate-600 hover:text-slate-900 transition-all cursor-pointer"
+            className="flex items-center gap-1.5 text-xs text-text-2 hover:text-text transition-all cursor-pointer"
             title="Reset Camera"
           >
             <RotateCcw className="h-3.5 w-3.5" /> Reset View
@@ -537,7 +537,7 @@ export default function Turbofan3DView({
         </div>
 
         {/* Orbit Hint */}
-        <div className="pointer-events-auto bg-white/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-200 text-[11px] text-slate-600 shadow-sm flex items-center gap-2">
+        <div className="pointer-events-auto bg-surface/80 backdrop-blur-md px-3 py-1.5 rounded-md border border-border text-xs text-text-muted shadow-sm flex items-center gap-2">
           <span>Left click + drag to orbit • Right click to pan • Scroll to zoom</span>
         </div>
       </div>

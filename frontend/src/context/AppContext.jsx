@@ -17,7 +17,8 @@ export function AppProvider({ children }) {
   // Global Shell state
   const [dataSource, setDataSource] = useState(DATA_SOURCES.REPLAY);
   const [activeEngineId, setActiveEngineId] = useState(availableEngines[0]?.id || 1);
-  const [currentCycle, setCurrentCycle] = useState(1);
+  const [activeEngineKey, setActiveEngineKey] = useState(availableEngines[0]?.key || 'VAL-001');
+  const [currentCycle, setCurrentCycle] = useState(30); // S5c: Replay starts at cycle 30
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1); // 0.5x - 8x
   const [isRubricsOpen, setIsRubricsOpen] = useState(false);
@@ -101,6 +102,8 @@ export function AppProvider({ children }) {
         setDataSource,
         activeEngineId,
         setActiveEngineId,
+        activeEngineKey,
+        setActiveEngineKey,
         currentCycle,
         setCurrentCycle,
         isPlaying,
