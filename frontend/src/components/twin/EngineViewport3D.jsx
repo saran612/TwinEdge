@@ -1,14 +1,16 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import {
   RotateCcw,
   Eye,
+  EyeOff,
   Maximize2,
   Camera,
   Layers,
-  HelpCircle,
+  MapPin,
 } from 'lucide-react';
 import componentMapData from '../../config/component_map.json';
 import { useApp } from '../../context/AppContext';
@@ -24,10 +26,12 @@ export default function EngineViewport3D({
 }) {
   const { theme } = useApp();
   const mountRef = useRef(null);
+  const fpsTextRef = useRef(null);
   const [loadProgress, setLoadProgress] = useState(0);
   const [loadError, setLoadError] = useState(null);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [fps, setFps] = useState(60);
+  const [showPins, setShowPins] = useState(true);
+  const [hoveredComponent, setHoveredComponent] = useState(null);
 
   const sceneRef = useRef(null);
   const cameraRef = useRef(null);
@@ -37,63 +41,93 @@ export default function EngineViewport3D({
   const meshesRef = useRef([]);
   const anchorsRef = useRef([]);
   const gridRef = useRef(null);
-  const ambientLightRef = useRef(null);
-  const dirLight1Ref = useRef(null);
-  const dirLight2Ref = useRef(null);
+  const anchorsGroupRef = useRef(null);
 
-  // Test hook exposure when VITE_E2E=1 or dev
+  // Expose window.__twin test hooks and ?debug3d=1 metrics
   useEffect(() => {
     if (typeof window !== 'undefined') {
       window.__twin = {
         select: (id) => onSelectComponent && onSelectComponent(id),
         getSelected: () => selectedComponentId,
+        _scene: sceneRef.current,
+        _camera: cameraRef.current,
+        _renderer: rendererRef.current,
+        _model: modelRef.current,
+        _meshes: meshesRef.current,
+        _anchors: anchorsRef.current,
+        getRendererInfo: () => rendererRef.current?.info,
+        getSceneDump: () => {
+          const nodes = [];
+          sceneRef.current?.traverse((node) => {
+            nodes.push({
+              name: node.name,
+              type: node.type,
+              isMesh: node.isMesh,
+              visible: node.visible,
+              position: node.position.toArray(),
+              userData: node.userData,
+            });
+          });
+          return nodes;
+        },
+        getMaterialsSummary: () => {
+          const mats = [];
+          sceneRef.current?.traverse((node) => {
+            if (node.isMesh && node.material) {
+              const m = node.material;
+              mats.push({
+                name: m.name || node.name,
+                type: m.type,
+                metalness: m.metalness,
+                roughness: m.roughness,
+                transparent: m.transparent,
+                opacity: m.opacity,
+                depthWrite: m.depthWrite,
+                depthTest: m.depthTest,
+              });
+            }
+          });
+          return mats;
+        },
       };
     }
   }, [selectedComponentId, onSelectComponent]);
 
+  // Main Three.js Scene Setup (Mounts ONCE on mount, decoupled from selectedComponentId to prevent flicker)
   useEffect(() => {
     if (!mountRef.current) return;
-    const width = mountRef.current.clientWidth;
-    const height = mountRef.current.clientHeight;
+    const container = mountRef.current;
+    const width = container.clientWidth || 800;
+    const height = container.clientHeight || 500;
 
-    // 1. Scene & Camera setup
+    // 1. Scene & Camera setup with tuned near/far
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(theme === 'light' ? 0xf1f5f9 : 0x060913);
+    scene.background = new THREE.Color(theme === 'light' ? 0xf8fafc : 0x090d16);
     sceneRef.current = scene;
 
-    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
+    const camera = new THREE.PerspectiveCamera(45, width / height, 0.05, 50);
     camera.position.set(4, 2.5, 4);
     cameraRef.current = camera;
 
-    // Keyboard navigation (Arrow keys cycle components, Escape clears)
-    const handleKeyDown = (e) => {
-      const comps = componentMapData.components;
-      if (!comps || comps.length === 0) return;
-      if (e.key === 'Escape') {
-        onSelectComponent && onSelectComponent(null);
-      } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-        const curIdx = comps.findIndex((c) => c.id === selectedComponentId);
-        const nextIdx = curIdx === -1 ? 0 : (curIdx + 1) % comps.length;
-        onSelectComponent && onSelectComponent(comps[nextIdx].id);
-      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-        const curIdx = comps.findIndex((c) => c.id === selectedComponentId);
-        const prevIdx = curIdx === -1 ? comps.length - 1 : (curIdx - 1 + comps.length) % comps.length;
-        onSelectComponent && onSelectComponent(comps[prevIdx].id);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-
-    // 2. Renderer setup capped at DPR 2 with headless fallback
+    // 2. Renderer setup with ACESFilmicToneMapping and sRGB color space
     let renderer;
+    let pmremGenerator;
     try {
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
       renderer.setSize(width, height);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 1.2;
+      renderer.toneMappingExposure = 1.35;
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
       rendererRef.current = renderer;
-      mountRef.current.innerHTML = '';
-      mountRef.current.appendChild(renderer.domElement);
+      container.innerHTML = '';
+      container.appendChild(renderer.domElement);
+
+      // T2 Local RoomEnvironment setup (no CDN / external requests)
+      pmremGenerator = new THREE.PMREMGenerator(renderer);
+      pmremGenerator.compileEquirectangularShader();
+      const roomEnv = new RoomEnvironment();
+      scene.environment = pmremGenerator.fromScene(roomEnv).texture;
     } catch (e) {
       console.warn('WebGLRenderer unavailable in current environment, using canvas dummy:', e.message);
       const dummyCanvas = document.createElement('canvas');
@@ -106,54 +140,56 @@ export default function EngineViewport3D({
         render: () => {},
         dispose: () => {},
       };
-      mountRef.current.innerHTML = '';
-      mountRef.current.appendChild(dummyCanvas);
+      container.innerHTML = '';
+      container.appendChild(dummyCanvas);
       setIsLoaded(true);
-      return () => {
-        window.removeEventListener('keydown', handleKeyDown);
-      };
+      return;
     }
 
-    // 3. Controls
+    // 3. OrbitControls
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
     controls.maxDistance = 15;
-    controls.minDistance = 1.2;
+    controls.minDistance = 1.0;
     controlsRef.current = controls;
 
-    // 4. Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, theme === 'light' ? 1.3 : 0.8);
-    scene.add(ambientLight);
-    ambientLightRef.current = ambientLight;
+    // 4. Studio Lighting setup
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x334155, theme === 'light' ? 1.6 : 1.2);
+    hemiLight.position.set(0, 10, 0);
+    scene.add(hemiLight);
 
-    const dirLight1 = new THREE.DirectionalLight(0x818cf8, theme === 'light' ? 1.8 : 1.5);
+    const dirLight1 = new THREE.DirectionalLight(0xffffff, theme === 'light' ? 2.0 : 1.6);
     dirLight1.position.set(5, 8, 5);
     scene.add(dirLight1);
-    dirLight1Ref.current = dirLight1;
 
-    const dirLight2 = new THREE.DirectionalLight(0x38bdf8, theme === 'light' ? 1.2 : 1.0);
-    dirLight2.position.set(-5, -4, -5);
+    const dirLight2 = new THREE.DirectionalLight(0x60a5fa, theme === 'light' ? 1.4 : 1.0);
+    dirLight2.position.set(-5, -3, -5);
     scene.add(dirLight2);
-    dirLight2Ref.current = dirLight2;
 
-    // 5. Grid helper
-    const gridColor1 = theme === 'light' ? 0x6366f1 : 0x1e293b;
-    const gridColor2 = theme === 'light' ? 0xcbd5e1 : 0x0f172a;
+    // 5. Grid floor helper
+    const gridColor1 = theme === 'light' ? 0x94a3b8 : 0x1e293b;
+    const gridColor2 = theme === 'light' ? 0xe2e8f0 : 0x0f172a;
     const grid = new THREE.GridHelper(8, 20, gridColor1, gridColor2);
     grid.position.y = -1.2;
     scene.add(grid);
     gridRef.current = grid;
 
-    // 6. Create hotspot anchor spheres for each component
+    // 6. Create hotspot anchor pins (T3)
     const anchorsGroup = new THREE.Group();
+    anchorsGroupRef.current = anchorsGroup;
+    anchorsRef.current = [];
+
     componentMapData.components.forEach((comp) => {
       const pos = comp.anchor_position || [0, 0, 0];
-      const geom = new THREE.SphereGeometry(0.12, 16, 16);
+      const geom = new THREE.SphereGeometry(0.045, 16, 16);
       const mat = new THREE.MeshStandardMaterial({
         color: 0x4f46e5,
         emissive: 0x312e81,
-        roughness: 0.2,
+        roughness: 0.25,
+        metalness: 0.2,
+        depthTest: true,
+        depthWrite: true,
       });
       const sphere = new THREE.Mesh(geom, mat);
       sphere.position.set(pos[0], pos[1], pos[2]);
@@ -163,7 +199,7 @@ export default function EngineViewport3D({
     });
     scene.add(anchorsGroup);
 
-    // 7. Load GLB Model
+    // 7. Load GLTF Turbofan Model with runtime material overrides (T2)
     const loader = new GLTFLoader();
     loader.load(
       '/models/Turbofan_Engine_Animated.glb',
@@ -180,15 +216,30 @@ export default function EngineViewport3D({
         model.scale.setScalar(scale);
         model.position.sub(center.multiplyScalar(scale));
 
-        // Traverse meshes
         const meshes = [];
         model.traverse((child) => {
           if (child.isMesh) {
-            child.castShadow = true;
-            child.receiveShadow = true;
-            child.userData.origMaterial = child.material;
-            // Match with component keywords
-            const mName = (child.name || '').toLowerCase();
+            child.castShadow = false;
+            child.receiveShadow = false;
+
+            // Runtime material override for near-black metals (T2)
+            if (child.material) {
+              const origMat = child.material.clone();
+              child.userData.origMaterial = origMat;
+
+              // Override dark metals to reflective studio surfaces
+              if (child.material.metalness !== undefined) {
+                child.material.metalness = Math.min(child.material.metalness, 0.85);
+              }
+              if (child.material.roughness !== undefined) {
+                child.material.roughness = Math.max(child.material.roughness, 0.35);
+              }
+              child.material.envMapIntensity = 1.5;
+              child.material.needsUpdate = true;
+            }
+
+            // Keyword matching to components
+            const mName = (child.name || '').toLowerCase().replace(/_/g, ' ');
             const matchedComp = componentMapData.components.find((c) =>
               c.mesh_keywords.some((k) => mName.includes(k))
             );
@@ -210,89 +261,134 @@ export default function EngineViewport3D({
       (err) => {
         console.warn('GLB load failed, falling back to procedural anchors:', err);
         setLoadError(err.message);
-        setIsLoaded(true); // Proceed with procedural anchors
+        setIsLoaded(true);
       }
     );
 
-    // 8. Raycasting for click selection
+    // 8. Raycasting for hover & click selection + dev ?calibrate=1
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
+    const isCalibrate = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('calibrate') === '1';
 
-    const handlePointerDown = (event) => {
+    const getRaycastHits = (event) => {
       const rect = renderer.domElement.getBoundingClientRect();
       mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
       mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
       raycaster.setFromCamera(mouse, camera);
 
       // Check anchors first
-      const anchorIntersects = raycaster.intersectObjects(anchorsRef.current);
-      if (anchorIntersects.length > 0) {
-        const hit = anchorIntersects[0].object;
-        if (hit.userData.componentId) {
-          onSelectComponent && onSelectComponent(hit.userData.componentId);
-          return;
-        }
+      if (anchorsGroup.visible) {
+        const anchorHits = raycaster.intersectObjects(anchorsRef.current);
+        if (anchorHits.length > 0) return { type: 'anchor', hit: anchorHits[0] };
       }
 
       // Check meshes
       if (meshesRef.current.length > 0) {
-        const meshIntersects = raycaster.intersectObjects(meshesRef.current);
-        if (meshIntersects.length > 0) {
-          const hitMesh = meshIntersects[0].object;
-          if (hitMesh.userData.componentId) {
-            onSelectComponent && onSelectComponent(hitMesh.userData.componentId);
-          }
-        }
+        const meshHits = raycaster.intersectObjects(meshesRef.current);
+        if (meshHits.length > 0) return { type: 'mesh', hit: meshHits[0] };
+      }
+      return null;
+    };
+
+    const handlePointerDown = (event) => {
+      const res = getRaycastHits(event);
+      if (!res) return;
+
+      if (isCalibrate && res.hit.point) {
+        console.info(`[TwinEdge Calibrate] Surface Click World Coord: [${res.hit.point.x.toFixed(3)}, ${res.hit.point.y.toFixed(3)}, ${res.hit.point.z.toFixed(3)}]`);
+      }
+
+      const cId = res.hit.object.userData?.componentId;
+      if (cId && onSelectComponent) {
+        onSelectComponent(cId);
+      }
+    };
+
+    const handlePointerMove = (event) => {
+      const res = getRaycastHits(event);
+      if (res && res.hit.object.userData?.componentId) {
+        const c = componentMapData.components.find((x) => x.id === res.hit.object.userData.componentId);
+        setHoveredComponent(c ? { name: c.name, id: c.id, x: event.clientX, y: event.clientY } : null);
+      } else {
+        setHoveredComponent(null);
       }
     };
 
     renderer.domElement.addEventListener('pointerdown', handlePointerDown);
+    renderer.domElement.addEventListener('pointermove', handlePointerMove);
 
-    // 9. Render loop with FPS measurement
+    // 9. High-performance Animation Loop + Rolling 60-frame FPS & p95 frame ms (T6)
     let animationFrameId;
-    let lastTime = performance.now();
-    let frameCount = 0;
-    let lastFpsUpdate = lastTime;
+    const frameTimes = [];
+    let lastFpsUpdate = performance.now();
+    let lastFrameTime = performance.now();
 
     const animate = (currentTime) => {
       animationFrameId = requestAnimationFrame(animate);
+
+      const delta = currentTime - lastFrameTime;
+      lastFrameTime = currentTime;
+      if (delta > 0 && delta < 500) {
+        frameTimes.push(delta);
+        if (frameTimes.length > 60) frameTimes.shift();
+      }
+
       controls.update();
       renderer.render(scene, camera);
 
-      frameCount++;
-      if (currentTime - lastFpsUpdate >= 1000) {
-        setFps(Math.round((frameCount * 1000) / (currentTime - lastFpsUpdate)));
-        frameCount = 0;
+      // T6: Update FPS and p95 DOM text at <= 2 Hz (every 500ms) without triggering React re-renders
+      if (currentTime - lastFpsUpdate >= 500) {
+        if (fpsTextRef.current && frameTimes.length > 0) {
+          const avgFps = Math.round(1000 / (frameTimes.reduce((a, b) => a + b, 0) / frameTimes.length));
+          const sorted = [...frameTimes].sort((a, b) => a - b);
+          const p95Idx = Math.floor(sorted.length * 0.95);
+          const p95Ms = sorted[p95Idx] ? sorted[p95Idx].toFixed(1) : (1000 / 60).toFixed(1);
+          fpsTextRef.current.textContent = `${avgFps} FPS (${p95Ms}ms)`;
+        }
         lastFpsUpdate = currentTime;
       }
     };
     animate(performance.now());
 
-    // 10. Resize observer
-    const handleResize = () => {
-      if (!mountRef.current) return;
-      const w = mountRef.current.clientWidth;
-      const h = mountRef.current.clientHeight;
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-      renderer.setSize(w, h);
-    };
-    window.addEventListener('resize', handleResize);
-
+    // 10. ResizeObserver with debouncing
+    let resizeTimer;
+    const resizeObserver = new ResizeObserver((entries) => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        for (const entry of entries) {
+          const { width: w, height: h } = entry.contentRect;
+          if (w > 0 && h > 0 && cameraRef.current && rendererRef.current) {
+            cameraRef.current.aspect = w / h;
+            cameraRef.current.updateProjectionMatrix();
+            rendererRef.current.setSize(w, h);
+          }
+        }
+      }, 50);
+    });
+    resizeObserver.observe(container);
 
     return () => {
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('keydown', handleKeyDown);
+      clearTimeout(resizeTimer);
+      resizeObserver.disconnect();
       if (renderer.domElement) {
         renderer.domElement.removeEventListener('pointerdown', handlePointerDown);
+        renderer.domElement.removeEventListener('pointermove', handlePointerMove);
       }
       cancelAnimationFrame(animationFrameId);
       controls.dispose();
+      if (pmremGenerator) pmremGenerator.dispose();
       renderer.dispose();
     };
-  }, [selectedComponentId, onSelectComponent]);
+  }, []); // Run ONCE on mount; updates happen via refs/lightweight effects below
 
-  // Update component highlighting and color modes
+  // Pins visibility toggle (T3)
+  useEffect(() => {
+    if (anchorsGroupRef.current) {
+      anchorsGroupRef.current.visible = showPins;
+    }
+  }, [showPins]);
+
+  // Update component highlighting and color modes outside scene recreation (T1 & T3)
   useEffect(() => {
     // Update anchors
     anchorsRef.current.forEach((sphere) => {
@@ -300,7 +396,8 @@ export default function EngineViewport3D({
       const isSelected = cId === selectedComponentId;
       if (sphere.material) {
         sphere.material.emissive.setHex(isSelected ? 0x22c55e : 0x312e81);
-        sphere.scale.setScalar(isSelected ? 1.4 : 1.0);
+        sphere.material.color.setHex(isSelected ? 0x4ade80 : 0x4f46e5);
+        sphere.scale.setScalar(isSelected ? 1.6 : 1.0);
       }
     });
 
@@ -312,38 +409,51 @@ export default function EngineViewport3D({
       if (mesh.material) {
         mesh.material.transparent = isXray;
         mesh.material.opacity = isXray ? 0.35 : 1.0;
+        mesh.material.depthWrite = !isXray;
 
         if (isSelected) {
-          mesh.material.emissive = new THREE.Color(0x4338ca);
-          mesh.material.emissiveIntensity = 0.6;
+          mesh.material.emissive = new THREE.Color(0x38bdf8);
+          mesh.material.emissiveIntensity = 0.5;
         } else {
-          mesh.material.emissive = new THREE.Color(0x000000);
-          mesh.material.emissiveIntensity = 0.0;
+          // Dynamic color modes
+          if (colorMode === 'Impact') {
+            const attr = componentAttributions.find((a) => a.componentId === cId);
+            if (attr && Math.abs(attr.deltaRul) >= 0.5) {
+              mesh.material.emissive = new THREE.Color(0xf59e0b); // Warning amber
+              mesh.material.emissiveIntensity = 0.4;
+            } else {
+              mesh.material.emissive = new THREE.Color(0x000000);
+              mesh.material.emissiveIntensity = 0;
+            }
+          } else if (colorMode === 'Sensor') {
+            const z = Math.abs(zScores[cId] || 0);
+            if (z > 2.0) {
+              mesh.material.emissive = new THREE.Color(0xef4444);
+              mesh.material.emissiveIntensity = 0.4;
+            } else {
+              mesh.material.emissive = new THREE.Color(0x000000);
+              mesh.material.emissiveIntensity = 0;
+            }
+          } else {
+            mesh.material.emissive = new THREE.Color(0x000000);
+            mesh.material.emissiveIntensity = 0;
+          }
         }
       }
     });
-  }, [selectedComponentId, colorMode, isXray]);
+  }, [selectedComponentId, colorMode, componentAttributions, zScores, isXray]);
 
-  // Synchronize 3D Scene with global theme switch
+  // Sync scene background & theme
   useEffect(() => {
     if (sceneRef.current) {
-      sceneRef.current.background = new THREE.Color(theme === 'light' ? 0xf1f5f9 : 0x060913);
-    }
-    if (ambientLightRef.current) {
-      ambientLightRef.current.intensity = theme === 'light' ? 1.3 : 0.8;
-    }
-    if (dirLight1Ref.current) {
-      dirLight1Ref.current.intensity = theme === 'light' ? 1.8 : 1.5;
-    }
-    if (dirLight2Ref.current) {
-      dirLight2Ref.current.intensity = theme === 'light' ? 1.2 : 1.0;
+      sceneRef.current.background = new THREE.Color(theme === 'light' ? 0xf8fafc : 0x090d16);
     }
     if (gridRef.current && sceneRef.current) {
       sceneRef.current.remove(gridRef.current);
       gridRef.current.geometry.dispose();
       gridRef.current.material.dispose();
-      const gridColor1 = theme === 'light' ? 0x6366f1 : 0x1e293b;
-      const gridColor2 = theme === 'light' ? 0xcbd5e1 : 0x0f172a;
+      const gridColor1 = theme === 'light' ? 0x94a3b8 : 0x1e293b;
+      const gridColor2 = theme === 'light' ? 0xe2e8f0 : 0x0f172a;
       const newGrid = new THREE.GridHelper(8, 20, gridColor1, gridColor2);
       newGrid.position.y = -1.2;
       sceneRef.current.add(newGrid);
@@ -390,6 +500,15 @@ export default function EngineViewport3D({
           <Layers className="w-3.5 h-3.5" />
         </button>
         <button
+          onClick={() => setShowPins(!showPins)}
+          className={`p-1.5 rounded-sm transition-colors cursor-pointer ${
+            showPins ? 'bg-surface-2 text-accent' : 'text-text-muted hover:text-text'
+          }`}
+          title={showPins ? 'Hide Hotspot Pins' : 'Show Hotspot Pins'}
+        >
+          <MapPin className="w-3.5 h-3.5" />
+        </button>
+        <button
           onClick={takeScreenshot}
           className="p-1.5 text-text-2 hover:text-text hover:bg-surface-2 rounded-sm transition-colors cursor-pointer"
           title="Screenshot PNG"
@@ -397,8 +516,22 @@ export default function EngineViewport3D({
           <Camera className="w-3.5 h-3.5" />
         </button>
         <div className="h-3 w-px bg-border mx-0.5"></div>
-        <span className="text-xs text-text-muted px-1">{fps} FPS</span>
+        {/* T6: Real rolling FPS and p95 ms updated via ref */}
+        <span ref={fpsTextRef} className="text-xs text-text-muted px-1 tabular-nums">
+          60 FPS (16.6ms)
+        </span>
       </div>
+
+      {/* Hover Tooltip (T3) */}
+      {hoveredComponent && (
+        <div
+          className="fixed pointer-events-none z-40 bg-surface/95 border border-border px-2.5 py-1 rounded shadow-md text-xs font-mono text-text flex items-center gap-1.5 backdrop-blur-xs transform -translate-x-1/2 -translate-y-full"
+          style={{ left: hoveredComponent.x, top: hoveredComponent.y - 12 }}
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+          <span>{hoveredComponent.name}</span>
+        </div>
+      )}
 
       {/* Loading Overlay */}
       {!isLoaded && (

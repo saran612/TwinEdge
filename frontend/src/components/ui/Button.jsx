@@ -50,23 +50,32 @@ export function IconButton({
   size = 'sm',
   className = '',
   ariaLabel,
+  disabled = false,
   ...props
 }) {
+  const baseClasses = 'inline-flex items-center justify-center font-medium rounded-md transition-colors cursor-pointer select-none disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-accent shrink-0';
+
   const sizeClasses = {
     md: 'w-10 h-10',
     sm: 'w-8 h-8',
   };
 
+  const variantClasses = {
+    primary: 'bg-accent text-on-accent hover:opacity-90 active:opacity-95 shadow-xs font-semibold',
+    secondary: 'bg-surface-2 border border-border text-text-main hover:bg-border/40 hover:text-text-main',
+    danger: 'bg-status-critical-bg text-status-critical-text border border-status-critical-border hover:opacity-90',
+    ghost: 'text-text-2 hover:bg-surface-2 hover:text-text-main',
+  };
+
   return (
-    <Button
-      variant={variant}
-      size={size}
-      className={`p-0 ${sizeClasses[size] || sizeClasses.sm} ${className}`}
+    <button
+      className={`${baseClasses} ${sizeClasses[size] || sizeClasses.sm} ${variantClasses[variant] || variantClasses.ghost} ${className}`}
       aria-label={ariaLabel}
+      disabled={disabled}
       {...props}
     >
       {children}
-    </Button>
+    </button>
   );
 }
 export default Button;
