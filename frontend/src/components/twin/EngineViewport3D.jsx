@@ -358,7 +358,7 @@ export default function EngineViewport3D({
           <Camera className="w-3.5 h-3.5" />
         </button>
         <div className="h-3 w-px bg-slate-800 mx-0.5"></div>
-        <span className="text-[10px] text-slate-400 px-1">{fps} FPS</span>
+        <span className="text-xs text-slate-400 px-1">{fps} FPS</span>
       </div>
 
       {/* Loading Overlay */}
@@ -378,7 +378,7 @@ export default function EngineViewport3D({
 
       {/* Model Fallback Notice */}
       {loadError && (
-        <div className="absolute bottom-3 left-3 z-20 bg-amber-950/80 border border-amber-800 text-amber-300 px-3 py-1.5 rounded text-[11px] font-mono flex items-center gap-2">
+        <div className="absolute bottom-3 left-3 z-20 bg-amber-950/80 border border-amber-800 text-amber-300 px-3 py-1.5 rounded text-xs font-mono flex items-center gap-2">
           <span>Active: Hotspot Anchor Framework (Model fallback)</span>
         </div>
       )}

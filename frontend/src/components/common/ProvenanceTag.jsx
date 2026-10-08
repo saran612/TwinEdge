@@ -15,7 +15,7 @@ export default function ProvenanceTag({ type = 'STATIC', size = 'xs' }) {
   };
 
   const tagStyle = styles[type] || styles.STATIC;
-  const sizeClass = size === 'xs' ? 'text-[9px] px-1.5 py-0.5' : 'text-xs px-2 py-1';
+  const sizeClass = 'text-xs px-2 py-0.5';
 
   return (
     <span

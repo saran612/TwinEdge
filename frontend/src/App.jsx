@@ -10,9 +10,15 @@ import AuditPage from './pages/AuditPage';
 import SimulationLabPage from './pages/SimulationLabPage';
 import EdgeModelPage from './pages/EdgeModelPage';
 import MethodLimitsPage from './pages/MethodLimitsPage';
+import StyleguidePage from './pages/StyleguidePage';
 
 export default function App() {
   const [activePage, setActivePage] = useState('overview');
+
+  // Dev-only styleguide route check
+  if (window.location.pathname === '/__styleguide') {
+    return <StyleguidePage />;
+  }
 
   const renderActivePage = () => {
     switch (activePage) {

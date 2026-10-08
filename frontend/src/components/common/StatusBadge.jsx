@@ -48,9 +48,7 @@ export default function StatusBadge({ status = 'HEALTHY', label, size = 'sm' }) 
   const cfg = configs[norm] || configs.UNKNOWN;
   const Icon = cfg.icon;
 
-  const sizeClasses = size === 'xs' 
-    ? 'text-[10px] px-1.5 py-0.5 gap-1' 
-    : 'text-xs px-2.5 py-1 gap-1.5';
+  const sizeClasses = 'text-xs px-2 py-0.5 gap-1';
 
   return (
     <span

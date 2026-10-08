@@ -26,7 +26,7 @@ export default function EngineSplitBadge({ split = 'HELD-OUT VALIDATION', size =
   };
 
   const style = styles[norm] || styles['HELD-OUT VALIDATION'];
-  const sizeClasses = size === 'xs' ? 'text-[9px] px-1.5 py-0.5' : 'text-xs px-2 py-0.5';
+  const sizeClasses = 'text-xs px-2 py-0.5';
 
   return (
     <span

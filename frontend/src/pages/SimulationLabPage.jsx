@@ -256,12 +256,12 @@ export default function SimulationLabPage({ onSendToTwin }) {
               }
             />
 
-            <div className="flex-1 min-h-[220px]">
+            <div className="flex-1 min-h-56">
               {results ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={results.chartData}>
-                    <XAxis dataKey="cycle" stroke="var(--text-muted)" tick={{ fontSize: 10 }} />
-                    <YAxis stroke="var(--text-muted)" domain={[0, 125]} tick={{ fontSize: 10 }} />
+                    <XAxis dataKey="cycle" stroke="var(--text-muted)" tick={{ fontSize: 12, fill: 'var(--text-2)' }} />
+                    <YAxis stroke="var(--text-muted)" domain={[0, 125]} tick={{ fontSize: 12, fill: 'var(--text-2)' }} />
                     <ReferenceLine y={60} stroke="var(--status-critical-text)" strokeDasharray="3 3" label="Threshold T=60" />
                     <Tooltip
                       contentStyle={{

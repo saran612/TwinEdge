@@ -126,10 +126,10 @@ export default function DigitalTwinPage({ onNavigateToAlerts, onNavigateToSim })
 
   return (
     <div className="flex flex-col h-full gap-4 select-none">
-      {/* Top Split: 60% 3D Viewport | 40% Control Panels */}
-      <div className="flex-1 flex gap-4 min-h-0">
-        {/* Left 60%: 3D Viewport */}
-        <div className="w-[60%] bg-surface border border-border rounded-lg overflow-hidden relative flex flex-col shadow-xs">
+      {/* Top Split: 3D Viewport (approx 3/5) | Control Panels (approx 2/5) */}
+      <div className="flex-1 grid grid-cols-12 gap-4 min-h-0">
+        {/* Left: 3D Viewport (7 cols) */}
+        <div className="col-span-7 bg-surface border border-border rounded-lg overflow-hidden relative flex flex-col shadow-xs">
           <EngineViewport3D
             selectedComponentId={selectedComponentId}
             onSelectComponent={(id) => setSelectedComponentId(id)}
@@ -139,8 +139,8 @@ export default function DigitalTwinPage({ onNavigateToAlerts, onNavigateToSim })
           />
         </div>
 
-        {/* Right 40%: Tabs [Component | Engine | Sensors] */}
-        <div className="w-[40%] bg-surface border border-border rounded-lg flex flex-col shadow-xs overflow-hidden">
+        {/* Right: Tabs [Component | Engine | Sensors] (5 cols) */}
+        <div className="col-span-5 bg-surface border border-border rounded-lg flex flex-col shadow-xs overflow-hidden">
           {/* Tab Headers */}
           <div className="flex items-center border-b border-border bg-surface-2/40 px-4">
             {[
@@ -362,13 +362,13 @@ export default function DigitalTwinPage({ onNavigateToAlerts, onNavigateToSim })
 
         <div className="flex items-center gap-5 text-xs font-mono">
           <div className="text-right">
-            <span className="text-text-muted text-[10px] block">PRED RUL</span>
-            <span className="text-text-main font-bold tabular-nums">
+            <span className="text-text-muted text-xs block">PRED RUL</span>
+            <span className="text-text font-bold tabular-nums">
               {engineMetrics.isWarmup ? 'Warm-up' : `${engineMetrics.rul.toFixed(1)} cycles`}
             </span>
           </div>
           <div className="text-right">
-            <span className="text-text-muted text-[10px] block">TRUE RUL</span>
+            <span className="text-text-muted text-xs block">TRUE RUL</span>
             <span className="text-accent font-bold tabular-nums">
               {engineMetrics.trueRul ? `${engineMetrics.trueRul.toFixed(1)} cycles` : '—'}
             </span>

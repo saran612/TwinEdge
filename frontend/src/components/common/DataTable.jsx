@@ -91,7 +91,7 @@ export default function DataTable({
                 <th
                   key={col.field}
                   onClick={() => col.sortable !== false && handleSort(col.field)}
-                  className={`p-3 font-semibold uppercase tracking-wider text-[11px] ${
+                  className={`p-3 font-semibold uppercase tracking-wider text-xs ${
                     col.sortable !== false ? 'cursor-pointer hover:text-slate-200' : ''
                   }`}
                   style={{ width: col.width }}

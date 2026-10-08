@@ -66,7 +66,7 @@ export default function AuditPage() {
       width: '22%',
       render: (row) => (
         <div className="flex items-center gap-1.5 font-mono text-xs">
-          <span className="text-text-2 truncate max-w-[140px]">{row.row_hash}</span>
+          <span className="text-text-2 truncate max-w-36">{row.row_hash}</span>
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -85,7 +85,7 @@ export default function AuditPage() {
       header: 'PREV HASH',
       width: '20%',
       render: (row) => (
-        <span className="font-mono text-xs text-text-muted truncate max-w-[120px] block">
+        <span className="font-mono text-xs text-text-muted truncate max-w-32 block">
           {row.prev_hash || 'GENESIS'}
         </span>
       ),

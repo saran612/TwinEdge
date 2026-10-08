@@ -117,8 +117,8 @@ export default function GlobalShell({ activePage, onNavigate, children }) {
               TE
             </div>
             <div className="flex flex-col">
-              <span className="font-semibold text-base tracking-tight text-text-main leading-tight">TwinEdge</span>
-              <span className="text-[10px] text-text-muted font-mono tracking-wider uppercase">Aircraft MRO Digital Twin</span>
+              <span className="font-semibold text-base tracking-tight text-text leading-tight">TwinEdge</span>
+              <span className="text-xs text-text-muted font-mono tracking-wider uppercase">Aircraft MRO Digital Twin</span>
             </div>
           </div>
 
@@ -158,7 +158,7 @@ export default function GlobalShell({ activePage, onNavigate, children }) {
                 className={`h-7 px-3 rounded-sm transition-colors text-xs font-medium cursor-pointer ${
                   dataSource === src
                     ? 'bg-accent text-on-accent font-semibold shadow-xs'
-                    : 'text-text-2 hover:text-text-main'
+                    : 'text-text-2 hover:text-text'
                 }`}
               >
                 {src}
@@ -174,7 +174,7 @@ export default function GlobalShell({ activePage, onNavigate, children }) {
               return (
                 <div
                   key={k}
-                  className={`px-2.5 py-0.5 rounded-full border text-[11px] font-medium flex items-center gap-1.5 ${pill.classes}`}
+                  className={`px-2.5 py-0.5 rounded-full border text-xs font-medium flex items-center gap-1.5 ${pill.classes}`}
                   title={`${k.toUpperCase()}: ${item.status} (${pill.label})`}
                 >
                   <span className={`w-1.5 h-1.5 rounded-full ${pill.dot}`}></span>
