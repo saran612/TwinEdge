@@ -14,7 +14,7 @@ import {
   Modal,
   Banner,
   Toggle
-} from './components/ui';
+} from '../components/ui';
 import { Activity, ShieldAlert, CheckCircle, Terminal, HelpCircle } from 'lucide-react';
 
 export default function StyleguidePage() {

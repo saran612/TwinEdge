@@ -13,10 +13,24 @@ import MethodLimitsPage from './pages/MethodLimitsPage';
 import StyleguidePage from './pages/StyleguidePage';
 
 export default function App() {
-  const [activePage, setActivePage] = useState('overview');
+  const getInitialPage = () => {
+    const hash = window.location.hash.replace('#/', '').replace('#', '');
+    return hash || 'overview';
+  };
+
+  const [activePage, setActivePage] = useState(getInitialPage);
+
+  React.useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#/', '').replace('#', '');
+      if (hash) setActivePage(hash);
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   // Dev-only styleguide route check
-  if (window.location.pathname === '/__styleguide') {
+  if (window.location.pathname === '/__styleguide' || activePage === '__styleguide') {
     return <StyleguidePage />;
   }
 
