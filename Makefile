@@ -75,3 +75,15 @@ pg-backup:
 pg-restore-test:
 	PYTHONPATH=backend:. $(PYTHON) scripts/pg_restore_test.py
 
+demo:
+	./run_infra.sh
+
+demo-pg:
+	LOG_SINK=postgres LOG_READ_STORE=postgres ./run_infra.sh
+
+verify-demo:
+	@echo "Checking TwinEdge services..."
+	@curl -sf http://localhost:8000/health >/dev/null && echo "Backend: GO" || echo "Backend: NO-GO"
+	@curl -sf http://localhost:5173 >/dev/null && echo "Frontend: GO" || echo "Frontend: NO-GO"
+
+

@@ -21,6 +21,32 @@ This document delineates strictly permitted technical claims substantiated by em
 | **Simulated Engine Stream (NASA C-MAPSS)** | All live streams originate from deterministic replay generators iterating over NASA C-MAPSS FD001 run-to-failure cycles (`data_origin: "replay_cmapss_fd001"`). Time compression is explicitly declared (e.g. 1 cycle = 0.2 s at 5 Hz). | Implemented in `edge_sim/replay_generator.py` and displayed on all live UI stream views. |
 | **Inference Site Attribution (EDGE vs CLOUD)** | Every prediction frame and health metric explicitly carries its `inference_site` tag (`EDGE` or `CLOUD`). The system supports automatic link failover (`--inference auto`) switching sites with hysteresis. | Empirically verified in `tests/test_stream_system.py` and `scripts/chaos.py` Scenario 2. |
 | **Data-Loss Policy & Buffer Eviction** | In disconnected states, telemetry is prioritized in local SQLite outbox queues: events and predictions have highest priority; when storage caps are exceeded, oldest raw sensor telemetry is evicted first while lifecycle events are guaranteed zero loss. | Empirically verified in `scripts/chaos.py` Scenario 5 and `tests/test_stream_system.py::test_outbox_priority_and_drop_policy`. |
+| **PostgreSQL Structured System-Log & Event Store** | PostgreSQL stores structured system logs and device events; SQLite remains the source of truth for telemetry and the audit chain. Outages degrade gracefully to SQLite with spooling and priority-based drops. | Empirically verified via `tests/test_log_pipeline.py`, `tests/test_read_api.py`, and `scripts/test_chaos_perf.py`. |
+
+---
+
+## 2. Forbidden Claims
+
+The following claims are **STRICTLY FORBIDDEN** across all documentation, API responses, marketing, and user interfaces:
+
+| Forbidden Claim | Reason for Prohibition | Required Correction / Grounded Reality |
+|---|---|---|
+| **FAA / EASA / DO-178C / DO-254 Flight Certification** | TwinEdge is a research prototype and decision-support proof-of-concept. It has not undergone DO-178C DAL certification or airworthiness approvals. | Must be labeled as: *"Decision-support prototype only. Not certified for flight or safety-critical dispatch decisions."* |
+| **Physics-Based / High-Fidelity Twin** | TwinEdge does not integrate CFD, thermodynamics, or finite element modeling. | Must be labeled as: *"Data-driven empirical surrogate model trained on C-MAPSS run-to-failure run benchmarks."* |
+| **Real Aircraft Live Telemetry** | Claiming telemetry originates from physical flying aircraft. Telemetry is an empirical benchmark playback. | Must state: *"Simulated engine stream (NASA C-MAPSS replay)."* |
+| **LLM-Powered Root-Cause Diagnostics** | There is no large language model or generative AI agent diagnosing mechanical failures. | Must state: *"Heuristic and statistical alert triage based on thresholded 1D-CNN regression predictions."* |
+| **Universal C-MAPSS Generalization (FD002–FD004)** | The model was trained and evaluated solely on FD001 (1 condition, 1 fault mode). It has not been validated on FD002 (6 operating conditions) or multi-fault sets. | Must state: *"Evaluated strictly on C-MAPSS FD001 benchmark data."* |
+| **Hardcoded / Hypothetical Latency Figures** | Claiming static latencies (e.g. "0.139 ms", "4.28 ms", "sub-millisecond API") without empirical runtime profiling or attributing host-CPU execution to "edge". | Direct ONNX execution is 0.042 ms (p50) on host CPU, while full HTTP `/predict` endpoint latency is 8.444 ms (p50) on localhost. Quote measured p50/p95 with protocol and hardware details. |
+| **"Sub-millisecond API" / "0.139 ms" / "4.28 ms"** | 0.139 ms was isolated in-memory Python array execution; 4.28 ms was a UI placeholder. End-to-end HTTP API latency is 8.444 ms (p50) due to HTTP parsing, feature scaling, and SQLite transaction overhead. | Forbidden terms. Report isolated ONNX CPU latency (0.042 ms) and full HTTP API latency (8.444 ms) separately. |
+| **"Superior" or "Outperforms" for the 1D-CNN** | The 1D-CNN (16.197 RMSE) does not outperform classical baselines: Ridge regression achieves 15.893 RMSE and HistGradientBoosting achieves 14.274 RMSE on the exact same feature splits. | Forbidden. Report that the 1D-CNN is comparable to Ridge and does not beat gradient-boosted trees (Verdict: WEAK). |
+| **"Accurate near end of life"** | The model's near-end-of-life RMSE ($RUL < 25$) is 14.282 cycles, which is higher than mid-life error ($RUL \in [50, 75]$ at 12.571 RMSE). Half of all test predictions are late (positive bias). | Forbidden. Disclose that near-EOL error is 14.28 cycles RMSE, half of predictions are late (+1.26 cycle bias), and late errors are mitigated by conservative threshold $T=60$ and $K=3$. |
+| **"Zero False Alarms"** | In 20 held-out validation engines evaluated at $T=60, K=3$, 2 engines raise alerts during healthy cycles ($RUL \ge 80$). Empirical false alarm rate is 3.89% (precision 91.91%). | Forbidden. Disclose that 2 of 20 engines false-alerted at $K=3$ on healthy segments. |
+| **"Quantized" / Unmeasured TFLite RMSE claims** | Quantization parity was only verified via isolated inference drift (<0.35 cycle average difference). TFLite RMSE vs ground truth was not independently measured on the test set. | Forbidden to claim audited TFLite accuracy vs truth. Only ONNX test RMSE (16.197) is verified. |
+| **Heuristic Confidence Values (e.g. 100% confidence)** | The 1D-CNN regression model outputs point estimates of RUL without calibrated epistemic uncertainty or Bayesian posteriors. | Fake heuristic confidence metrics have been removed. Point predictions must not be presented with fabricated certainty percentages. |
+| **Zero-Loss Data Claims without Buffer Verification** | Claiming edge-to-cloud resilience when disconnected without local Influx/SQLite spool verification. | Telemetry spooling is governed by SQLite buffer retention and local storage quotas. |
+| **"Postgres is the primary database"** | PostgreSQL is strictly the structured system log and device event sink. SQLite remains the authoritative store for telemetry, alerts, and the cryptographic audit trail. | Forbidden. Must state: *"PostgreSQL stores structured system logs and device events; SQLite remains the source of truth for telemetry and the audit chain."* |
+| **"Postgres-backed audit"** | The cryptographic hash chain (`audit_trail`) is maintained in SQLite. PostgreSQL does not hold the authoritative audit ledger. | Forbidden. State clearly that the audit chain is SQLite-backed. |
+
 
 ---
 
