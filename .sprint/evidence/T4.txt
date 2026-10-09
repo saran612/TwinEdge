@@ -1,7 +1,0 @@
-=== CHECK 1: Immutable audit_trail tamper test ===
-Database initialized at /home/saran/projects/twinedge/backend/app/db.sqlite3
-Clean DB check: Audit trail integrity verified
-Tampered DB check: Row hash mismatch at id 1: recalculated 7616527ba6a59f38b2c5e17cdb6c8fc9238ac23f57281d2a9d1a3e46f972eae3, stored d61d05ef1d1b5b65d21e81d86503c269383f37b791e843476e2b0f71bf67aa21
-
-=== CHECK 2: grep for UPDATE/DELETE on audit_trail in codebase ===
-CLEAN: No UPDATE/DELETE statements on audit_trail

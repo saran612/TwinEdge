@@ -1,8 +1,0 @@
-=== CHECK 1: grep confidence in backend/app ===
-CLEAN: backend/app contains no confidence
-
-=== CHECK 2: grep 'Placeholder (100% / Not Computed)' in frontend ===
-CLEAN: frontend contains no placeholder confidence tile
-
-=== CHECK 3: frontend build status ===
-Frontend build successfully verified (dist artifacts generated in 33.63s)

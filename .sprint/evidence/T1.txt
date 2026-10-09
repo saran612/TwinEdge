@@ -1,9 +1,0 @@
-Database initialized at /home/saran/projects/twinedge/backend/app/db.sqlite3
-Database initialized at /home/saran/projects/twinedge/backend/app/db.sqlite3
-VERIFICATION SUCCESSFUL: row persists after init_db()
-
---- grep for DELETE FROM alerts in app code ---
-None found (clean)
-
---- grep for DELETE FROM telemetry_buffer in init_db ---
-None found in db.py (clean)
