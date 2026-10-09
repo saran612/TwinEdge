@@ -1,0 +1,11 @@
+Added VAL engine 5: 269 cycles (run-to-failure)
+Added VAL engine 11: 240 cycles (run-to-failure)
+Added VAL engine 23: 168 cycles (run-to-failure)
+Added VAL engine 77: 154 cycles (run-to-failure)
+Added TEST engine 1: 31 cycles (test cutoff)
+Added TEST engine 2: 49 cycles (test cutoff)
+Added TEST engine 3: 126 cycles (test cutoff)
+
+Replay pack generated successfully:
+  NPZ: /home/saran/projects/twinedge/jetson_node/data/replay_pack.npz (30d5bc5c54ef264f...)
+  Manifest: /home/saran/projects/twinedge/jetson_node/data/replay_manifest.json

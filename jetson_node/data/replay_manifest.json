@@ -1,0 +1,79 @@
+{
+  "dataset": "NASA C-MAPSS FD001",
+  "features": [
+    "s_2",
+    "s_3",
+    "s_4",
+    "s_7",
+    "s_8",
+    "s_9",
+    "s_11",
+    "s_12",
+    "s_13",
+    "s_14",
+    "s_15",
+    "s_17",
+    "s_20",
+    "s_21"
+  ],
+  "features_count": 14,
+  "replay_pack_sha256": "30d5bc5c54ef264f5ee202f02b7e787cf4eb9af40d64c6bfa45c8cc556f2eed1",
+  "engines": [
+    {
+      "key": "val_unit_5",
+      "split": "VAL",
+      "unit": 5,
+      "cycles_count": 269,
+      "max_cycle": 269,
+      "min_cycle": 1
+    },
+    {
+      "key": "val_unit_11",
+      "split": "VAL",
+      "unit": 11,
+      "cycles_count": 240,
+      "max_cycle": 240,
+      "min_cycle": 1
+    },
+    {
+      "key": "val_unit_23",
+      "split": "VAL",
+      "unit": 23,
+      "cycles_count": 168,
+      "max_cycle": 168,
+      "min_cycle": 1
+    },
+    {
+      "key": "val_unit_77",
+      "split": "VAL",
+      "unit": 77,
+      "cycles_count": 154,
+      "max_cycle": 154,
+      "min_cycle": 1
+    },
+    {
+      "key": "test_unit_1",
+      "split": "TEST",
+      "unit": 1,
+      "cycles_count": 31,
+      "max_cycle": 31,
+      "final_true_rul": 112.0
+    },
+    {
+      "key": "test_unit_2",
+      "split": "TEST",
+      "unit": 2,
+      "cycles_count": 49,
+      "max_cycle": 49,
+      "final_true_rul": 98.0
+    },
+    {
+      "key": "test_unit_3",
+      "split": "TEST",
+      "unit": 3,
+      "cycles_count": 126,
+      "max_cycle": 126,
+      "final_true_rul": 69.0
+    }
+  ]
+}
