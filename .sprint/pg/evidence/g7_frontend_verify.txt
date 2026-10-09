@@ -1,0 +1,1 @@
+Vite build succeeded with store chip and degraded banner

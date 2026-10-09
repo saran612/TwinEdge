@@ -93,8 +93,13 @@ export default function MethodLimitsPage() {
                   <span className="text-status-healthy-text font-bold shrink-0">✓</span>
                   <span><strong>Tamper-evident SHA-256 chain:</strong> Cryptographically linked ledger ensuring maintenance sign-offs cannot be repudiated.</span>
                 </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-status-healthy-text font-bold shrink-0">✓</span>
+                  <span><strong>Structured system-log store:</strong> PostgreSQL stores structured system logs and device events; SQLite remains the source of truth for telemetry and the audit chain.</span>
+                </li>
               </ul>
             </Card>
+
 
             <Card className="p-5 space-y-4 border-status-critical-border">
               <CardHeader

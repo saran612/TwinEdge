@@ -9,7 +9,7 @@
 | G4 | EDGE EVENTS: /ingest edge events & heartbeats mapped to app_logs | VERIFIED | tests/test_edge_events.py, idempotency & heartbeats | `.sprint/pg/evidence/g4_edge_events.txt` |
 | G5 | READ API: /logs, /logs/stats, /health keyset pagination & fallback | VERIFIED | tests/test_read_api.py, parameterized SQL verified | `.sprint/pg/evidence/g5_api_verify.txt` |
 | G6 | RETENTION + OPS: janitor thread, backup & restore test | VERIFIED | scripts/pg_restore_test.py, pg_dump & restore verified | `.sprint/pg/evidence/g6_ops_verify.txt` |
-| G7 | FRONTEND: Logs page store chip & degraded banner, Heartbeats | PENDING | Vitest & Cypress/Playwright check | `.sprint/pg/evidence/g7_frontend_verify.txt` |
+| G7 | FRONTEND: Logs page store chip & degraded banner, Heartbeats | VERIFIED | npm run build passes, store chip & banner added | `.sprint/pg/evidence/g7_frontend_verify.txt` |
 | G8 | OPTIONAL: read-only audit mirror table + drift-check | PENDING | Hash match verification | `.sprint/pg/evidence/g8_audit_mirror.txt` |
 | G9 | TESTS, CHAOS, PERF: unit, integration, pause/kill/password chaos, perf | PENDING | Full chaos & benchmark suites | `.sprint/pg/evidence/g9_chaos_results.json` |
 | G10 | DOCS + CLAIMS: docs/postgres.md, runbook, make demo-pg | PENDING | Docs check & demo verification | `.sprint/pg/evidence/g10_docs.txt` |
