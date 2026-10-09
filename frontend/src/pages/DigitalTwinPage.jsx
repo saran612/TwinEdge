@@ -452,9 +452,9 @@ export default function DigitalTwinPage({ onNavigateToAlerts, onNavigateToSim })
                         return (
                           <Line
                             key={s.id}
-                            type="monotone"
+                            type="linear"
                             dataKey={s.id}
-                            stroke={SENSOR_PALETTE[s.id] || '#0ea5e9'}
+                            stroke={SENSOR_PALETTE[s.id] || 'var(--accent)'}
                             strokeWidth={isComponentSensor ? 2.5 : 1.0}
                             strokeOpacity={isComponentSensor ? 1.0 : 0.35}
                             dot={false}

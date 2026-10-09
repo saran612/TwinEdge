@@ -63,6 +63,35 @@ export default defineConfig({
         target: 'http://localhost:8000',
         changeOrigin: true,
       },
+      '/audit': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/fleet': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '^/model(/.*)?$': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        bypass: (req) => {
+          if (req.url.startsWith('/models')) {
+            return req.url; // serve static file from frontend
+          }
+        },
+      },
+      '/logs': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/edge': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/stream': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
     },
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin',

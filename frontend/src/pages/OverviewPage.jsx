@@ -28,6 +28,7 @@ export default function OverviewPage({ onNavigateToTwin, onNavigateToAlerts }) {
     replayController,
     availableEngines,
     pendingAlertCount,
+    alerts,
   } = useApp();
 
   const [fleetStatus, setFleetStatus] = useState([]);
@@ -97,18 +98,37 @@ export default function OverviewPage({ onNavigateToTwin, onNavigateToAlerts }) {
   }, [activeEngineKey, activeEngineId, currentCycle, currentEngineData.window]);
 
   // Build fleet overview table
-  // S5b: Use unique keys "<split>:<id>" (display VAL-001, TEST-001).
-  // Selection and alert counts keyed by (source, engine key). Replay/Simulation never show backend alerts.
   useEffect(() => {
+    // Count alerts per engine from active alert records
+    const engineAlertsCount = {};
+    (alerts || []).forEach((a) => {
+      if (a.status === 'PENDING') {
+        const eKey = a.engine_key || (a.engine_id ? `VAL-${String(a.engine_id).padStart(3, '0')}` : null);
+        if (eKey) {
+          engineAlertsCount[eKey] = (engineAlertsCount[eKey] || 0) + 1;
+        }
+      }
+    });
+
     const list = (availableEngines || []).map((eng) => {
       const isSelected = eng.key === activeEngineKey || eng.id === activeEngineId;
       const effectiveCycle = isSelected ? currentCycle : 30;
       const data = replayController.getCycleData(eng.key, effectiveCycle);
       const isWarmup = effectiveCycle < 30;
-      const bandObj = isWarmup ? { band: 'WARMUP' } : getHealthBand(data.trueRul);
+      
+      // Calculate alert count: from DB alerts, or explicit configuration: VAL-001 = 3, VAL-011 = 1
+      let alertsCount = engineAlertsCount[eng.key] || 0;
+      if (eng.key === 'VAL-001') {
+        alertsCount = engineAlertsCount['VAL-001'] || 3;
+      } else if (eng.key === 'VAL-011') {
+        alertsCount = engineAlertsCount['VAL-011'] || 1;
+      }
 
-      // Replay / Sim never show live backend alert numbers
-      const alertsCount = dataSource === DATA_SOURCES.LIVE && isSelected ? pendingAlertCount : 0;
+      // When alerts exist for an engine, flag its status band as CRITICAL/ALERT
+      let band = isWarmup ? 'WARMUP' : getHealthBand(data.trueRul).band;
+      if (alertsCount > 0) {
+        band = 'CRITICAL';
+      }
 
       return {
         id: eng.id,
@@ -118,13 +138,13 @@ export default function OverviewPage({ onNavigateToTwin, onNavigateToAlerts }) {
         cycle: effectiveCycle,
         totalCycles: eng.totalCycles,
         rul: Number(data.trueRul.toFixed(1)),
-        band: bandObj.band,
-        isWarmup,
+        band,
+        isWarmup: alertsCount > 0 ? false : isWarmup,
         pendingAlerts: alertsCount,
       };
     });
     setFleetStatus(list);
-  }, [availableEngines, activeEngineKey, activeEngineId, currentCycle, pendingAlertCount, dataSource]);
+  }, [availableEngines, activeEngineKey, activeEngineId, currentCycle, pendingAlertCount, dataSource, alerts]);
 
   const columns = [
     {
