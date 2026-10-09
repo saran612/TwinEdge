@@ -1,0 +1,64 @@
+==========================================
+TwinEdge Jetson Hardware & Environment Probe
+Timestamp: 2026-10-09T02:09:49Z
+==========================================
+--- 1. Device Tree Model ---
+UNAVAILABLE (/proc/device-tree/model not found)
+--- 2. NVIDIA Tegra Release ---
+UNAVAILABLE (/etc/nv_tegra_release not found)
+--- 3. OS Release ---
+PRETTY_NAME="Ubuntu 26.04.1 LTS"
+NAME="Ubuntu"
+VERSION_ID="26.04"
+VERSION="26.04.1 LTS (Resolute Raccoon)"
+VERSION_CODENAME=resolute
+ID=ubuntu
+ID_LIKE=debian
+HOME_URL="https://www.ubuntu.com/"
+SUPPORT_URL="https://help.ubuntu.com/"
+BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+UBUNTU_CODENAME=resolute
+LOGO=ubuntu-logo
+--- 4. Architecture ---
+x86_64
+--- 5. Python & Pip ---
+Python 3.14.4
+pip 26.2.1 from /home/saran/.local/lib/python3.14/site-packages/pip (python 3.14)
+--- 6. Memory (free -m) ---
+               total        used        free      shared  buff/cache   available
+Mem:           31204        7812       18913        1985        6916       23391
+Swap:           8191           0        8191
+--- 7. CPU Cores (nproc) ---
+8
+--- 8. Storage (df -h) ---
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/nvme0n1p4  444G  118G  304G  28% /
+--- 9. nvpmodel Power Mode ---
+nvpmodel: NOT AVAILABLE (non-Tegra host or not installed)
+--- 10. NTP / Clock Sync Status ---
+               Local time: Fri 2026-10-09 07:39:51 IST
+           Universal time: Fri 2026-10-09 02:09:51 UTC
+                 RTC time: Fri 2026-10-09 02:09:51
+                Time zone: Asia/Kolkata (IST, +0530)
+System clock synchronized: yes
+              NTP service: active
+          RTC in local TZ: no
+--- 11. Thermal Zones ---
+/sys/class/thermal/thermal_zone0 (acpitz): 42 C
+/sys/class/thermal/thermal_zone1 (pch_cannonlake): 41 C
+/sys/class/thermal/thermal_zone2 (INT3400 Thermal): 20 C
+/sys/class/thermal/thermal_zone3 (B0D4): 42 C
+/sys/class/thermal/thermal_zone4 (SEN1): 1 C
+/sys/class/thermal/thermal_zone5 (SEN2): 35 C
+/sys/class/thermal/thermal_zone6 (iwlwifi_1): 38 C
+/sys/class/thermal/thermal_zone7 (x86_pkg_temp): 43 C
+--- 12. Docker Availability ---
+Docker version 29.1.3, build 29.1.3-0ubuntu4.1
+--- 13. Python Library Imports Check ---
+  numpy: 2.5.3
+  onnxruntime: NOT INSTALLED
+  tflite_runtime: NOT INSTALLED
+==========================================
+Probe Complete.
+==========================================

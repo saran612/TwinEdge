@@ -1,0 +1,138 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TwinEdge Frame v1",
+  "type": "object",
+  "required": [
+    "v",
+    "device_id",
+    "boot_id",
+    "session_id",
+    "engine_key",
+    "split",
+    "seq",
+    "cycle",
+    "edge_ts",
+    "clock_synced",
+    "data_origin",
+    "sensors",
+    "ground_truth",
+    "inference",
+    "twin",
+    "alert"
+  ],
+  "properties": {
+    "v": {
+      "type": "integer",
+      "enum": [1]
+    },
+    "device_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "boot_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "session_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "engine_key": {
+      "type": "string",
+      "minLength": 1
+    },
+    "split": {
+      "type": "string",
+      "enum": ["VAL", "TEST", "TRAIN"]
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "cycle": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "edge_ts": {
+      "type": "number"
+    },
+    "clock_synced": {
+      "type": "boolean"
+    },
+    "data_origin": {
+      "type": "string",
+      "pattern": "^replay_cmapss_fd001.*"
+    },
+    "sensors": {
+      "type": "object",
+      "required": [
+        "s_2", "s_3", "s_4", "s_7", "s_8", "s_9",
+        "s_11", "s_12", "s_13", "s_14", "s_15", "s_17", "s_20", "s_21"
+      ],
+      "properties": {
+        "s_2": { "type": "number" },
+        "s_3": { "type": "number" },
+        "s_4": { "type": "number" },
+        "s_7": { "type": "number" },
+        "s_8": { "type": "number" },
+        "s_9": { "type": "number" },
+        "s_11": { "type": "number" },
+        "s_12": { "type": "number" },
+        "s_13": { "type": "number" },
+        "s_14": { "type": "number" },
+        "s_15": { "type": "number" },
+        "s_17": { "type": "number" },
+        "s_20": { "type": "number" },
+        "s_21": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "ground_truth": {
+      "type": "object",
+      "required": ["true_rul"],
+      "properties": {
+        "true_rul": { "type": ["number", "null"] },
+        "tag": { "type": "string" }
+      }
+    },
+    "inference": {
+      "type": "object",
+      "required": ["site", "runtime", "rul", "latency_ms", "model_sha", "warmup", "ood_flags"],
+      "properties": {
+        "site": { "type": "string", "enum": ["EDGE", "CLOUD"] },
+        "runtime": { "type": "string" },
+        "rul": { "type": "number" },
+        "latency_ms": { "type": "number" },
+        "model_sha": { "type": "string" },
+        "warmup": { "type": "boolean" },
+        "ood_flags": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "twin": {
+      "type": "object",
+      "required": ["health_index", "band"],
+      "properties": {
+        "health_index": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "band": {
+          "type": "string",
+          "enum": ["HEALTHY", "WARNING", "CRITICAL", "WARMUP", "unreliable_input"]
+        }
+      }
+    },
+    "alert": {
+      "type": "object",
+      "required": ["state", "k_count"],
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": ["NONE", "PENDING", "ALERT_RAISED"]
+        },
+        "k_count": { "type": "integer", "minimum": 0 }
+      }
+    }
+  },
+  "additionalProperties": false
+}

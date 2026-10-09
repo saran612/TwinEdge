@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TwinEdge Ingest Batch Envelope v1",
+  "type": "object",
+  "required": ["v", "device_id", "batch_id", "items"],
+  "properties": {
+    "v": { "type": "integer", "enum": [1] },
+    "device_id": { "type": "string", "minLength": 1 },
+    "batch_id": { "type": "string", "minLength": 1 },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["device_id", "seq", "kind", "data"],
+        "properties": {
+          "device_id": { "type": "string" },
+          "seq": { "type": "integer", "minimum": 0 },
+          "kind": { "type": "string", "enum": ["telemetry", "prediction", "event"] },
+          "data": { "type": "object" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

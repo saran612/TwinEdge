@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TwinEdge Event v1",
+  "type": "object",
+  "required": ["v", "device_id", "boot_id", "session_id", "engine_key", "seq", "kind", "message", "edge_ts", "level", "data"],
+  "properties": {
+    "v": { "type": "integer", "enum": [1] },
+    "device_id": { "type": "string", "minLength": 1 },
+    "boot_id": { "type": "string", "minLength": 1 },
+    "session_id": { "type": "string", "minLength": 1 },
+    "engine_key": { "type": "string", "minLength": 1 },
+    "seq": { "type": "integer", "minimum": 0 },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "alert_raised",
+        "alert_superseded",
+        "eol",
+        "session_start",
+        "link_up",
+        "link_down",
+        "outbox_drop",
+        "clock_unsynced",
+        "thermal_throttle",
+        "late_cycle",
+        "canary_failed",
+        "restart",
+        "heartbeat"
+      ]
+    },
+    "message": { "type": "string" },
+    "edge_ts": { "type": "number" },
+    "level": { "type": "string", "enum": ["DEBUG", "INFO", "WARN", "ERROR", "CRITICAL"] },
+    "data": { "type": "object" }
+  },
+  "additionalProperties": false
+}
