@@ -1,0 +1,23 @@
+[Unit]
+Description=TwinEdge NVIDIA Jetson Edge Node Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=saran
+EnvironmentFile=-/etc/twinedge/node.env
+WorkingDirectory=/opt/twinedge/jetson_node
+
+# Pre-execution canary self-test
+ExecStartPre=/usr/bin/python3 -c "from jetson_node.node.runtime import select_runtime; select_runtime('/opt/twinedge/jetson_node/model')"
+
+ExecStart=/usr/bin/python3 -m jetson_node.node.app
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

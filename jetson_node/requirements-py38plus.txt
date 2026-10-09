@@ -1,0 +1,2 @@
+# Requirements for Python 3.8+ (JetPack 6 / Orin Nano / Dev)
+numpy>=1.20.0

@@ -1,0 +1,3 @@
+# Requirements for Python 3.6 (JetPack 4.6 / Jetson Nano)
+# Pin numpy to aarch64 wheel compatible version (<= 1.19.5)
+numpy<=1.19.5
