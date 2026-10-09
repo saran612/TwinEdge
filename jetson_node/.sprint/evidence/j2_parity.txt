@@ -1,0 +1,14 @@
+=== TwinEdge Edge Model Exporter ===
+ONNX Model SHA256: 032c3efa3156470e5ef7a3f31eb574d2830d4ff473625b6be814a05c0f1a1b7b
+Saved weights to: /home/saran/projects/twinedge/jetson_node/model/edge_model.npz
+
+--- Verifying Parity vs ONNX Runtime ---
+Testing parity on 1200 windows...
+Max Absolute Diff: 0.00003052
+Mean Absolute Diff: 0.00000636
+RUL RMSE Diff:     0.00000894
+ORT time (1200): 0.0809s | Pure NumPy time: 0.7258s
+PARITY CHECK PASSED (max_diff < 0.001)
+Saved canary fixtures to: /home/saran/projects/twinedge/jetson_node/model/canary_fixtures.json
+Saved edge model descriptor to: /home/saran/projects/twinedge/jetson_node/model/edge_model.json
+=== Export Complete & Verified ===
