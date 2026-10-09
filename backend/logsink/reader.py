@@ -23,6 +23,7 @@ class PostgresLogReader:
         self.user = user
         self.password = password
         self._pool: Optional[ConnectionPool] = None
+        self._forced_unhealthy = False
         self._init_pool()
 
     def _init_pool(self):
@@ -33,6 +34,8 @@ class PostgresLogReader:
             self._pool = None
 
     def is_healthy(self) -> bool:
+        if self._forced_unhealthy:
+            return False
         if not self._pool:
             self._init_pool()
         if not self._pool:

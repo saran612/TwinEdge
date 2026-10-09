@@ -7,7 +7,7 @@
 | G2 | MIGRATIONS: plain SQL, runner with advisory lock, app_logs, device_heartbeats | VERIFIED | scripts/migrate.py, checksum & advisory lock verified | `.sprint/pg/evidence/g2_migrations.txt` |
 | G3 | LOG PIPELINE: bounded queue, worker batch, spooler, redaction, rate limiter | VERIFIED | 5 unit tests pass, drop policy, spool order | `.sprint/pg/evidence/g3_pipeline_test.txt` |
 | G4 | EDGE EVENTS: /ingest edge events & heartbeats mapped to app_logs | VERIFIED | tests/test_edge_events.py, idempotency & heartbeats | `.sprint/pg/evidence/g4_edge_events.txt` |
-| G5 | READ API: /logs, /logs/stats, /health keyset pagination & fallback | PENDING | Contract & fallback verification | `.sprint/pg/evidence/g5_api_verify.txt` |
+| G5 | READ API: /logs, /logs/stats, /health keyset pagination & fallback | VERIFIED | tests/test_read_api.py, parameterized SQL verified | `.sprint/pg/evidence/g5_api_verify.txt` |
 | G6 | RETENTION + OPS: janitor thread, backup & restore test | PENDING | Retention purge & restore verification | `.sprint/pg/evidence/g6_ops_verify.txt` |
 | G7 | FRONTEND: Logs page store chip & degraded banner, Heartbeats | PENDING | Vitest & Cypress/Playwright check | `.sprint/pg/evidence/g7_frontend_verify.txt` |
 | G8 | OPTIONAL: read-only audit mirror table + drift-check | PENDING | Hash match verification | `.sprint/pg/evidence/g8_audit_mirror.txt` |
