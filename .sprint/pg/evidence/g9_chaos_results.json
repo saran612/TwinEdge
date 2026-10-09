@@ -1,0 +1,25 @@
+{
+  "roles_permissions_verified": true,
+  "chaos_scenarios": {
+    "pause_postgres_predict": {
+      "status": "success",
+      "latency_ms": 9.01
+    },
+    "wrong_password_auth": "rejected_as_expected",
+    "burst_drops": {
+      "status": "verified_by_unit_test",
+      "never_dropped_error": true
+    }
+  },
+  "perf_benchmark": {
+    "count": 200,
+    "p50_ms": 7.94,
+    "p95_ms": 13.84,
+    "g0_baseline_p50_ms": 8.17,
+    "g0_baseline_p95_ms": 13.21,
+    "p50_delta_ms": -0.22,
+    "p95_delta_ms": 0.63
+  },
+  "query_acceptance_verified": true,
+  "timestamp": 1791508483.9591334
+}

@@ -1,0 +1,51 @@
+=== Query 1: Errors per source in last hour ===
+HashAggregate  (cost=184.69..186.36 rows=167 width=40) (actual time=0.706..0.708 rows=6 loops=1)
+  Group Key: source
+  Batches: 1  Memory Usage: 40kB
+  Buffers: shared hit=122
+  ->  Seq Scan on app_logs  (cost=0.00..183.00 rows=339 width=32) (actual time=0.006..0.552 rows=1200 loops=1)
+        Filter: ((level >= 40) AND (ts >= (clock_timestamp() - '01:00:00'::interval)))
+        Rows Removed by Filter: 3800
+        Buffers: shared hit=122
+Planning:
+  Buffers: shared hit=165
+Planning Time: 0.623 ms
+Execution Time: 0.746 ms
+
+=== Query 2: p95 latency from jsonb data ===
+Aggregate  (cost=183.13..183.14 rows=1 width=8) (actual time=3.066..3.067 rows=1 loops=1)
+  Buffers: shared hit=130
+  ->  Seq Scan on app_logs  (cost=0.00..183.00 rows=10 width=32) (actual time=0.004..1.229 rows=5000 loops=1)
+        Filter: ((data ? 'latency_ms'::text) AND (ts >= (clock_timestamp() - '24:00:00'::interval)))
+        Buffers: shared hit=122
+Planning:
+  Buffers: shared hit=14
+Planning Time: 0.085 ms
+Execution Time: 3.087 ms
+
+=== Query 3: Edge events between timestamps ===
+Sort  (cost=198.26..198.26 rows=2 width=290) (actual time=0.798..0.834 rows=1000 loops=1)
+  Sort Key: ts DESC
+  Sort Method: quicksort  Memory: 212kB
+  Buffers: shared hit=122
+  ->  Seq Scan on app_logs  (cost=0.00..198.25 rows=2 width=290) (actual time=0.006..0.674 rows=1000 loops=1)
+        Filter: ((device_id = 'node-1'::text) AND (ts <= clock_timestamp()) AND (ts >= (clock_timestamp() - '02:00:00'::interval)))
+        Rows Removed by Filter: 4000
+        Buffers: shared hit=122
+Planning:
+  Buffers: shared hit=5
+Planning Time: 0.095 ms
+Execution Time: 0.883 ms
+
+=== Query 4: Message search ===
+Limit  (cost=160.13..160.14 rows=1 width=290) (actual time=4.185..4.202 rows=50 loops=1)
+  Buffers: shared hit=122
+  ->  Sort  (cost=160.13..160.14 rows=1 width=290) (actual time=4.184..4.199 rows=50 loops=1)
+        Sort Key: ts DESC
+        Sort Method: top-N heapsort  Memory: 37kB
+        Buffers: shared hit=122
+        ->  Seq Scan on app_logs  (cost=0.00..160.12 rows=1 width=290) (actual time=0.006..3.771 rows=5000 loops=1)
+              Filter: (message ~~* '%operational%'::text)
+              Buffers: shared hit=122
+Planning Time: 0.035 ms
+Execution Time: 4.234 ms
