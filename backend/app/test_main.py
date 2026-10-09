@@ -74,6 +74,15 @@ def test_alerts_signoff():
         double_signoff_res = client.post("/alerts/test_pytest_123/signoff", json=signoff_payload)
         assert double_signoff_res.status_code == 409
 
+    # Clean up test alert to ensure idempotency across test runs
+    import sqlite3
+    from app.db import DB_PATH
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("DELETE FROM alerts WHERE id = 'test_pytest_123'")
+    conn.commit()
+    conn.close()
+
 def test_non_destructive_init_db():
     # T1: insert alert, call init_db(), verify row persists
     init_db()
@@ -87,6 +96,9 @@ def test_non_destructive_init_db():
     c = conn.cursor()
     c.execute("SELECT id FROM alerts WHERE id = ?", (test_aid,))
     row = c.fetchone()
+    # Clean up
+    c.execute("DELETE FROM alerts WHERE id = ?", (test_aid,))
+    conn.commit()
     conn.close()
     assert row is not None and row[0] == test_aid
 
@@ -123,6 +135,11 @@ def test_k_cycle_alert_gating():
     record_prediction_and_check_alert(eng_id, 5, 52.0, threshold=60.0, k=3)
     c.execute("SELECT COUNT(*) FROM predictions WHERE engine_id = ?", (eng_id,))
     count_after = c.fetchone()[0]
+    # Clean up test artifacts
+    c.execute("DELETE FROM predictions WHERE engine_id = ?", (eng_id,))
+    if a5:
+        c.execute("DELETE FROM alerts WHERE id = ?", (a5,))
+    conn.commit()
     conn.close()
     assert count_before == count_after
 

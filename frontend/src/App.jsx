@@ -40,12 +40,17 @@ export default function App() {
       case 'overview':
         return (
           <OverviewPage
-            onNavigateToTwin={() => setActivePage('twin')}
-            onNavigateToAlerts={() => setActivePage('alerts')}
+            onNavigateToTwin={() => handleNavigate('twin')}
+            onNavigateToAlerts={() => handleNavigate('alerts')}
           />
         );
       case 'twin':
-        return <DigitalTwinPage />;
+        return (
+          <DigitalTwinPage
+            onNavigateToAlerts={() => handleNavigate('alerts')}
+            onNavigateToSim={() => handleNavigate('simulation')}
+          />
+        );
       case 'telemetry':
         return <TelemetryPage />;
       case 'alerts':
@@ -55,13 +60,22 @@ export default function App() {
       case 'logs':
         return <LogsPage />;
       case 'simulation':
-        return <SimulationLabPage />;
+        return (
+          <SimulationLabPage
+            onSendToTwin={() => handleNavigate('twin')}
+          />
+        );
       case 'edge':
         return <EdgeModelPage />;
       case 'about':
         return <MethodLimitsPage />;
       default:
-        return <OverviewPage onNavigateToTwin={() => setActivePage('twin')} onNavigateToAlerts={() => setActivePage('alerts')} />;
+        return (
+          <OverviewPage
+            onNavigateToTwin={() => handleNavigate('twin')}
+            onNavigateToAlerts={() => handleNavigate('alerts')}
+          />
+        );
     }
   };
 

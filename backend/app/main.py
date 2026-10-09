@@ -26,6 +26,7 @@ from app.db import (
 )
 
 from logsink.middleware import pipeline_instance, RequestLoggingMiddleware, LOG_SINK, LOG_READ_STORE
+from logsink.pipeline import name_to_level
 from logsink.reader import PostgresLogReader
 
 pg_reader = PostgresLogReader(

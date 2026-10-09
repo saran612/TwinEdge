@@ -11,6 +11,8 @@ import {
   Camera,
   Layers,
   MapPin,
+  Play,
+  Pause,
 } from 'lucide-react';
 import componentMapData from '../../config/component_map.json';
 import { useApp } from '../../context/AppContext';
@@ -31,6 +33,8 @@ export default function EngineViewport3D({
   const [loadError, setLoadError] = useState(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [showPins, setShowPins] = useState(true);
+  const [isSpinning, setIsSpinning] = useState(true);
+  const isSpinningRef = useRef(true);
   const [hoveredComponent, setHoveredComponent] = useState(null);
 
   const sceneRef = useRef(null);
@@ -38,6 +42,8 @@ export default function EngineViewport3D({
   const rendererRef = useRef(null);
   const controlsRef = useRef(null);
   const modelRef = useRef(null);
+  const mixerRef = useRef(null);
+  const actionRef = useRef(null);
   const meshesRef = useRef([]);
   const anchorsRef = useRef([]);
   const gridRef = useRef(null);
@@ -251,6 +257,16 @@ export default function EngineViewport3D({
         });
         meshesRef.current = meshes;
         scene.add(model);
+
+        // Setup built-in GLTF blade spin animation
+        if (gltf.animations && gltf.animations.length > 0) {
+          const mixer = new THREE.AnimationMixer(model);
+          mixerRef.current = mixer;
+          const action = mixer.clipAction(gltf.animations[0]);
+          action.play();
+          actionRef.current = action;
+        }
+
         setIsLoaded(true);
       },
       (xhr) => {
@@ -331,6 +347,11 @@ export default function EngineViewport3D({
       if (delta > 0 && delta < 500) {
         frameTimes.push(delta);
         if (frameTimes.length > 60) frameTimes.shift();
+      }
+
+      // Update blade spin animation
+      if (mixerRef.current && isSpinningRef.current && delta > 0) {
+        mixerRef.current.update(delta * 0.001);
       }
 
       controls.update();
@@ -479,6 +500,12 @@ export default function EngineViewport3D({
     }
   };
 
+  const toggleSpin = () => {
+    const next = !isSpinning;
+    setIsSpinning(next);
+    isSpinningRef.current = next;
+  };
+
   return (
     <div className="relative w-full h-full bg-surface overflow-hidden flex flex-col select-none">
       {/* 3D Viewport Toolbar */}
@@ -489,6 +516,15 @@ export default function EngineViewport3D({
           title="Reset Camera"
         >
           <RotateCcw className="w-3.5 h-3.5" />
+        </button>
+        <button
+          onClick={toggleSpin}
+          className={`p-1.5 rounded-sm transition-colors cursor-pointer ${
+            isSpinning ? 'bg-surface-2 text-accent' : 'text-text-muted hover:text-text'
+          }`}
+          title={isSpinning ? 'Pause Blade Rotation' : 'Spin Blades'}
+        >
+          {isSpinning ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
         </button>
         <button
           onClick={() => setIsXray(!isXray)}
