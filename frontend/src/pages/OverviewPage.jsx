@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { DATA_SOURCES } from '../context/AppContext';
 import { MetricCard, Chip, ProvenanceTag, Card, CardHeader, Button, TableShell } from '../components/ui';
-import { getHealthBand, HEALTH_CONFIG } from '../config/rubrics';
+import { getHealthBand, HEALTH_CONFIG, SENSORS_14 } from '../config/rubrics';
 import { runLocalInference } from '../services/inferenceEngine';
+import trainingStatsJson from '../offline/training_stats.json';
 import {
   Play,
   Pause,
@@ -53,15 +54,37 @@ export default function OverviewPage({ onNavigateToTwin, onNavigateToAlerts }) {
         const eol = currentCycle + Math.round(rul);
         const healthIdx = Math.round((rul / HEALTH_CONFIG.RUL_CAP) * 100);
         const isWarmup = currentCycle < 30;
-        const bandObj = isWarmup ? { band: 'WARMUP' } : getHealthBand(rul);
+        let isUnreliable = false;
+        const lastRow = currentEngineData.window && currentEngineData.window.length > 0
+          ? currentEngineData.window[currentEngineData.window.length - 1]
+          : null;
+
+        if (lastRow) {
+          SENSORS_14.forEach((sMeta, sIdx) => {
+            const val = lastRow[sIdx];
+            const stats = trainingStatsJson[sMeta.id];
+            if (stats && val !== undefined) {
+              const z = Math.abs((val - stats.mean) / (stats.std || 1));
+              if (z > 4.0 || val < stats.min || val > stats.max) {
+                isUnreliable = true;
+              }
+            }
+          });
+        }
+
+        let bandObj = isWarmup ? { band: 'WARMUP' } : getHealthBand(rul);
+        if (isUnreliable) {
+          bandObj = { band: 'UNRELIABLE', label: 'Unreliable input', color: 'rose' };
+        }
 
         setActiveEngineMetrics({
           rul,
           eolCycle: eol,
-          healthIndex: healthIdx,
+          healthIndex: isUnreliable ? Math.min(healthIdx, 59) : healthIdx,
           band: bandObj.band,
           latencyMs: inf.latencyMs,
           isWarmup,
+          isUnreliable,
         });
       } catch (err) {
         console.warn('Inference error in overview:', err);

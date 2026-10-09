@@ -79,7 +79,7 @@ export default function MethodLimitsPage() {
               <ul className="space-y-3 text-xs text-text-2">
                 <li className="flex items-start gap-2">
                   <span className="text-status-healthy-text font-bold shrink-0">✓</span>
-                  <span><strong>Edge-native microservice:</strong> Sub-millisecond local ONNX Runtime inference deployed at the edge without cloud round-trip dependencies.</span>
+                  <span><strong>Edge-native inference engine:</strong> Direct ONNX Runtime model execution (0.04 ms p50 isolated CPU, 8.4 ms p50 HTTP API) running locally without cloud round-trip dependencies.</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-status-healthy-text font-bold shrink-0">✓</span>
@@ -227,19 +227,19 @@ export default function MethodLimitsPage() {
         </div>
       )}
 
-      {/* TAB 4: DECISION NORMS */}
+      {/* TAB 4: DECISION NORMS & AUDITED LIMITS */}
       {activeTab === 'rubrics' && (
         <div className="space-y-6">
           <Card className="p-5 space-y-4">
             <CardHeader
-              title="Operational Decision Norms"
+              title="Operational Decision Norms & Safety Architecture"
               action={<Scale className="w-4 h-4 text-accent" />}
             />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="p-4 rounded-md bg-surface-2 border border-border space-y-2">
-                <h4 className="text-xs font-semibold text-text-main uppercase">K-Cycle Alert Gating</h4>
+                <h4 className="text-xs font-semibold text-text-main uppercase">K-Cycle Alert Gating (K=3)</h4>
                 <p className="text-xs text-text-2 leading-relaxed">
-                  Requires 3 consecutive cycles with RUL &lt; 60 to confirm degradation trends and suppress transient noise before dispatching maintenance alerts.
+                  Requires 3 consecutive cycles with RUL &lt; 60 to confirm degradation trends. The gate covers false alarms; late or missed predictions are mitigated by a conservative threshold and K-gate; the model is advisory.
                 </p>
               </div>
               <div className="p-4 rounded-md bg-surface-2 border border-border space-y-2">
@@ -247,6 +247,36 @@ export default function MethodLimitsPage() {
                 <p className="text-xs text-text-2 leading-relaxed">
                   Every alert disposition requires a certified reviewer ID and engineering justification, committed into an immutable SHA-256 ledger.
                 </p>
+              </div>
+            </div>
+          </Card>
+
+          {/* Audited Model Limits */}
+          <Card className="p-5 space-y-4 border-status-degrading-border">
+            <CardHeader
+              title="Five Audited Model & Operating Limits (MODEL_AUDIT.md)"
+              action={<AlertTriangle className="w-5 h-5 text-status-degrading-text" />}
+            />
+            <div className="space-y-3 text-xs text-text-2">
+              <div className="p-3 bg-surface-2 rounded-md border border-border">
+                <span className="font-semibold text-text-main block mb-1">1. Baselines match or beat the CNN (Verdict: WEAK)</span>
+                <span>On identical train/val/test splits, Ridge regression achieves 15.89 RMSE and HistGradientBoosting achieves 14.27 RMSE, matching or beating the 1D-CNN (16.20 RMSE).</span>
+              </div>
+              <div className="p-3 bg-surface-2 rounded-md border border-border">
+                <span className="font-semibold text-text-main block mb-1">2. Half of test predictions are late (Directional Bias)</span>
+                <span>The model exhibits a positive bias of +1.26 cycles on test engines, with exactly 50.0% of predictions running late (predicting more life than remaining).</span>
+              </div>
+              <div className="p-3 bg-surface-2 rounded-md border border-border">
+                <span className="font-semibold text-text-main block mb-1">3. Near-end-of-life RMSE is 14.3 cycles</span>
+                <span>For critical engines with true RUL &lt; 25 cycles, RMSE is 14.28 cycles (MAE 10.98 cycles), higher than mid-life error (12.57 RMSE in cycles 50-75).</span>
+              </div>
+              <div className="p-3 bg-surface-2 rounded-md border border-border">
+                <span className="font-semibold text-text-main block mb-1">4. Far-OOD inputs saturate to the 125 cap</span>
+                <span>Severe sensor anomalies (e.g. &plusmn;6&sigma;) trigger outputs above 290 cycles that clamp to the 125 cap; therefore, explicit Out-of-Distribution (OOD) checks are required.</span>
+              </div>
+              <div className="p-3 bg-surface-2 rounded-md border border-border">
+                <span className="font-semibold text-text-main block mb-1">5. False alarm rate in 20-engine validation fleet</span>
+                <span>Across 20 full run-to-failure engines evaluated at K=3, 2 of 20 engines triggered a premature alert while still healthy (RUL &ge; 80), representing a 3.89% false alarm rate.</span>
               </div>
             </div>
           </Card>
@@ -288,8 +318,8 @@ export default function MethodLimitsPage() {
                     <td className="py-2.5 font-mono text-accent">scripts/verify_wiring.py</td>
                   </tr>
                   <tr className="h-10">
-                    <td className="py-2.5 font-semibold text-text-main pr-4">Sub-ms Edge Latency</td>
-                    <td className="py-2.5 pr-4">ONNX Runtime CPU inference p50 ~0.04 ms, HTTP p50 ~8.4 ms</td>
+                    <td className="py-2.5 font-semibold text-text-main pr-4">Isolated ONNX Inference Latency</td>
+                    <td className="py-2.5 pr-4">Direct ONNX CPU inference p50 0.042 ms; end-to-end HTTP API p50 8.444 ms</td>
                     <td className="py-2.5 font-mono text-accent">reports/model/benchmark_results.json</td>
                   </tr>
                 </tbody>
@@ -327,6 +357,21 @@ export default function MethodLimitsPage() {
                     <td className="py-2.5 font-semibold text-status-critical-text pr-4">"LLM Root-Cause Diagnostics"</td>
                     <td className="py-2.5 pr-4">No generative AI reasoning or mechanical problem solving.</td>
                     <td className="py-2.5 text-text-muted italic">"Heuristic and statistical alert triage from 1D-CNN predictions."</td>
+                  </tr>
+                  <tr className="h-10">
+                    <td className="py-2.5 font-semibold text-status-critical-text pr-4">"Superior / Outperforms Baselines"</td>
+                    <td className="py-2.5 pr-4">Ridge regression (15.89 RMSE) and HistGBM (14.27 RMSE) match or beat CNN (16.20 RMSE).</td>
+                    <td className="py-2.5 text-text-muted italic">"1D-CNN performs comparably to Ridge; classical trees achieve lower RMSE (Verdict: WEAK)."</td>
+                  </tr>
+                  <tr className="h-10">
+                    <td className="py-2.5 font-semibold text-status-critical-text pr-4">"Sub-millisecond API / 0.139 ms / 4.28 ms"</td>
+                    <td className="py-2.5 pr-4">Full HTTP API takes 8.444 ms (p50) due to payload parsing, scaling, and database transactions.</td>
+                    <td className="py-2.5 text-text-muted italic">"Isolated ONNX CPU execution is 0.042 ms; full HTTP API is 8.444 ms (p50)."</td>
+                  </tr>
+                  <tr className="h-10">
+                    <td className="py-2.5 font-semibold text-status-critical-text pr-4">"Zero False Alarms"</td>
+                    <td className="py-2.5 pr-4">At T=60, K=3, 2 of 20 engines triggered alerts while still in healthy cycles (3.89% FAR).</td>
+                    <td className="py-2.5 text-text-muted italic">"Audited precision is 91.91% with 3.89% false alarm rate on healthy cycles."</td>
                   </tr>
                 </tbody>
               </table>

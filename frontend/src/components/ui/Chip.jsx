@@ -50,6 +50,11 @@ export function Chip({ status = 'HEALTHY', label, size = 'sm', className = '' })
       icon: HelpCircle,
       defaultText: 'Unknown',
     },
+    UNRELIABLE: {
+      style: 'bg-status-critical-bg text-status-critical-text border-status-critical-border',
+      icon: AlertTriangle,
+      defaultText: 'Unreliable input',
+    },
   };
 
   const cfg = configs[norm] || configs.UNKNOWN;

@@ -22,7 +22,8 @@ export const HEALTH_CONFIG = {
   FEATURE_COUNT: 14,
   MODEL_NAME: 'twinedge_rul_cnn',
   DATASET_NAME: 'C-MAPSS FD001',
-  MODEL_SHA_PREFIX: '71355b',
+  MODEL_SHA_PREFIX: '032c3efa',
+  MODEL_SIZE_BYTES: 71355,
   BUILD_VERSION: 'v2.1-flightdeck',
   DEVICE_LABEL: 'Edge Gateway (x86_64)',
 };

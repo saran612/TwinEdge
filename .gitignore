@@ -39,4 +39,8 @@ backend/app/db.sqlite3
 .venv-audit/
 .tmp_audit/
 reports/model/raw/
+.sprint/
+temp/
+.logs/
+.pids/
 

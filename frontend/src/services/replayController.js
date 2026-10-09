@@ -27,16 +27,21 @@ export class ReplayController {
   }
 
   getEngine(engineIdentifier) {
+    let match = null;
     if (typeof engineIdentifier === 'string' && engineIdentifier.includes('-')) {
       const [prefix, numStr] = engineIdentifier.split('-');
       const splitTarget = prefix === 'VAL' ? 'HELD-OUT VALIDATION' : 'TEST';
-      const match = this.engines.find(
+      match = this.engines.find(
         (e) => e.engine_id === Number(numStr) && e.split === splitTarget
       );
-      if (match) return match;
+    } else if (engineIdentifier !== undefined && engineIdentifier !== null) {
+      match = this.engines.find((e) => e.engine_id === Number(engineIdentifier));
     }
-    const match = this.engines.find((e) => e.engine_id === Number(engineIdentifier));
-    return match || this.engines[0];
+    const resolved = match || this.engines[0];
+    if (resolved && !resolved.totalCycles) {
+      resolved.totalCycles = resolved.total_cycles;
+    }
+    return resolved;
   }
 
   getCycleData(engineId, cycle) {

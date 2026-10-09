@@ -85,7 +85,25 @@ For a detailed breakdown of the technical design, tradeoffs, and real vs. mocked
   - The quantized frozen models (`backend/model/twinedge_rul.onnx` and `twinedge_rul.tflite`) are committed serving artifacts ready for immediate deployment.
   - *Note on Retraining*: `backend/model/train.py` requires `tensorflow` and `tf2onnx`. Because TensorFlow binary wheels are not currently available for Python 3.14+, model retraining requires a separate Python 3.10 or 3.11 environment.
 
-### 1. Initialize Python Environment & Backend
+### Quick Start (One Command)
+To start the entire stack (Docker containers for InfluxDB & Mosquitto, FastAPI backend, and Vite frontend):
+```bash
+./run_infra.sh start
+```
+Check stack health & process status:
+```bash
+./run_infra.sh status
+```
+Stop all services and containers cleanly:
+```bash
+./run_infra.sh stop
+```
+
+---
+
+### Step-by-Step Manual Setup
+
+#### 1. Initialize Python Environment & Backend
 Using `uv` (fast standalone package manager):
 ```bash
 # Create Python 3.11 virtualenv
@@ -96,7 +114,7 @@ uv pip install -r backend/requirements.txt --python backend/venv/bin/python
 PYTHONPATH=backend backend/venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-### 2. Launch React Dashboard Frontend
+#### 2. Launch React Dashboard Frontend
 ```bash
 cd frontend
 npm install
@@ -104,18 +122,18 @@ npm run dev
 ```
 Open `http://localhost:5173` in your browser.
 
-### 3. Launch Multi-Engine Telemetry Simulator
+#### 3. Launch Multi-Engine Telemetry Simulator
 To stream live turbofan sensor packets for Engines 1, 2, and 3 concurrently:
 ```bash
 PYTHONPATH=backend backend/venv/bin/python backend/simulator.py
 ```
 
-### 4. Optional: Start Infrastructure Containers (Mosquitto & InfluxDB)
-If Docker is installed:
+#### 4. Infrastructure Containers (Mosquitto & InfluxDB)
+If managing infrastructure containers independently:
 ```bash
 ./run_infra.sh start
 ```
-If Docker is not installed, the platform automatically runs in Edge-Resilient mode (SQLite `telemetry_buffer` fallback).
+If Docker is not installed or unavailable, the platform automatically runs in Edge-Resilient mode (SQLite `telemetry_buffer` fallback).
 
 ---
 

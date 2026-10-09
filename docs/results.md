@@ -8,23 +8,27 @@ This document lists the measured metrics of the TwinEdge 1D CNN model trained on
 
 | Metric | Measured Value | Target / Reference | Status |
 |---|---|---|---|
-| **Test Set RMSE** | **16.197** cycles | < 20.0 cycles | **Exceeded Target** |
-| **Inference CPU Latency** | **0.139 ms** | < 10.0 ms | **Exceeded Target** |
-| **Model Size (ONNX)** | **71.36 KB** | < 5.0 MB | **Exceeded Target** |
-| **Model Size (TFLite)** | **24.41 KB** | < 1.0 MB | **Exceeded Target** |
+| **Test Set RMSE (Capped)** | **16.1972** cycles | < 20.0 cycles | **Audited (Host CPU)** |
+| **Test Set RMSE (Uncapped)** | **17.3354** cycles | — | **Audited (Host CPU)** |
+| **Isolated ONNX Latency (p50)** | **0.0420 ms** | < 1.0 ms | **Audited (Host CPU)** |
+| **HTTP `/predict` Latency (p50)** | **8.444 ms** | < 20.0 ms | **Audited (FastAPI/SQLite)** |
+| **Model Size (ONNX)** | **71.36 KB** (71,355 B) | < 5.0 MB | **Verified** |
+| **Model Size (TFLite)** | **24.41 KB** (24,408 B) | < 1.0 MB | **Verified** |
 
 ---
 
 ## Latency Benchmarking Details
 
-- **Test Condition**: 100 inference passes on sliding windows of shape `(1, 30, 14)` on edge CPU hardware.
-- **Warmup passes**: 10
-- **Average latency**: **0.139 ms** per window (measured locally; 0.052 ms measured on modern multi-core host).
-- **Theoretical Single-Core Throughput Limit**: **~7,194 inferences/second** (arithmetically extrapolated as `1000 / 0.139 ms` single-core ONNX runtime execution). 
-  *Note on Scope*: This figure reflects raw CPU inference capability for sliding windows. In production, end-to-end multi-engine throughput will be constrained by MQTT broker ingestion, network I/O, and SQLite/InfluxDB write serialization; an end-to-end concurrent load test at full 7,000-engine scale has not been run.
+- **Isolated ONNX Inference**: Direct ONNX Runtime CPU provider execution executes at **0.042 ms (p50)** (batch 1, default threads) and **0.027 ms (p50)** (1 thread pinned).
+- **End-to-End HTTP API Latency**: The full `/predict` endpoint round-trip takes **8.444 ms (p50)** and ~18.1 ms (p95) on localhost, comprising request parsing (~1.2 ms), feature scaling (0.117 ms), ONNX inference (0.042 ms), and SQLite transaction writes (~5.5–6.5 ms).
+- **Historical Note**: Prior references to "0.139 ms" measured only a raw isolated Python loop over a single pre-scaled tensor, ignoring network, JSON parsing, and database transactions.
 
 ---
 
-## Model Accuracy Analysis
+## Model Accuracy & Baseline Analysis
 
-The 1D CNN architecture achieved an RMSE of **16.197** cycles on the official test set. In predictive maintenance literature, a capped RUL of 125 cycles with an RMSE below 18.0 is considered state-of-the-art for simple CNN architectures. The model demonstrates high reliability in identifying early-stage degradation while avoiding false triggers during stable healthy cycles.
+The 1D-CNN achieves an RMSE of **16.1972** cycles on the C-MAPSS FD001 test set (with ground truth capped at 125 cycles). However, classical baselines evaluated on identical splits achieve equal or superior accuracy:
+- **Ridge Regression**: **15.8930 RMSE**
+- **HistGradientBoostingRegressor**: **14.2740 RMSE**
+
+Consequently, the model audit classifies the 1D-CNN as **WEAK** (authentically trained, but does not beat classical linear/tree baselines). The model acts as an advisory decision-support tool where the human engineer sign-off gate covers false alarms, and late predictions are mitigated by a conservative threshold ($T=60$) and K-streak gating ($K=3$).

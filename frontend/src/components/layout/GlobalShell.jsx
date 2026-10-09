@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Activity,
   Layers,
@@ -20,6 +20,7 @@ import { DATA_SOURCES } from '../../context/AppContext';
 import RubricsDrawer from '../common/RubricsDrawer';
 import { HEALTH_CONFIG } from '../../config/rubrics';
 import { Button, IconButton, Select } from '../ui';
+import { api } from '../../services/api';
 
 export const NAV_PAGES = [
   { id: 'overview', label: 'Fleet Overview', icon: Activity },
@@ -49,6 +50,30 @@ export default function GlobalShell({ activePage, onNavigate, children }) {
     theme,
     toggleTheme,
   } = useApp();
+
+  const [modelInfo, setModelInfo] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    api.getModelInfo()
+      .then((data) => {
+        if (isMounted && data) {
+          setModelInfo(data);
+        }
+      })
+      .catch(() => {
+        // Fallback to static manifest values if API call fails
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const onnxSha = modelInfo?.registry?.artifacts?.onnx?.sha256 || modelInfo?.onnx_sha256;
+  const shaDisplay = onnxSha ? onnxSha.slice(0, 8) : (HEALTH_CONFIG.MODEL_SHA_PREFIX || 'UNVERIFIED');
+  const sizeDisplay = modelInfo?.onnx_size_bytes 
+    ? `${(modelInfo.onnx_size_bytes / 1024).toFixed(1)} KB` 
+    : (HEALTH_CONFIG.MODEL_SIZE_BYTES ? `${(HEALTH_CONFIG.MODEL_SIZE_BYTES / 1024).toFixed(1)} KB` : 'UNVERIFIED');
 
   // Connectivity semantics per spec:
   // Red only when the SELECTED data source cannot work;
@@ -255,7 +280,11 @@ export default function GlobalShell({ activePage, onNavigate, children }) {
           <div className="p-4 border-t border-border text-xs font-mono text-text-muted space-y-1.5 bg-surface-2/40">
             <div className="flex justify-between">
               <span>Model SHA:</span>
-              <span className="text-text-2 font-medium">{HEALTH_CONFIG.MODEL_SHA_PREFIX}</span>
+              <span className="text-text-2 font-medium">{shaDisplay}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Model Size:</span>
+              <span className="text-text-2 font-medium">{sizeDisplay}</span>
             </div>
             <div className="flex justify-between">
               <span>Dataset:</span>

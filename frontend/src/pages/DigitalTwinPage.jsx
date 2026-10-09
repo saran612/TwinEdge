@@ -7,6 +7,7 @@ import { SENSORS_14, HEALTH_CONFIG, getHealthBand } from '../config/rubrics';
 import { computeComponentAttribution } from '../services/counterfactual';
 import { runLocalInference } from '../services/inferenceEngine';
 import scalerJson from '../offline/scaler.json';
+import trainingStatsJson from '../offline/training_stats.json';
 import {
   Play,
   Pause,
@@ -66,15 +67,36 @@ export default function DigitalTwinPage({ onNavigateToAlerts, onNavigateToSim })
         const rul = inf.rul;
         const eol = currentCycle + Math.round(rul);
         const healthIdx = Math.round((rul / HEALTH_CONFIG.RUL_CAP) * 100);
-        const bandObj = isWarmup ? { band: 'WARMUP' } : getHealthBand(rul);
+
+        // Check if latest input is out-of-distribution (|z| > 4 or outside min/max)
+        let isUnreliable = false;
+        const lastRow = engineData.window && engineData.window.length > 0 ? engineData.window[engineData.window.length - 1] : null;
+        if (lastRow) {
+          SENSORS_14.forEach((sMeta, sIdx) => {
+            const val = lastRow[sIdx];
+            const stats = trainingStatsJson[sMeta.id];
+            if (stats && val !== undefined) {
+              const z = Math.abs((val - stats.mean) / (stats.std || 1));
+              if (z > 4.0 || val < stats.min || val > stats.max) {
+                isUnreliable = true;
+              }
+            }
+          });
+        }
+
+        let bandObj = isWarmup ? { band: 'WARMUP' } : getHealthBand(rul);
+        if (isUnreliable) {
+          bandObj = { band: 'UNRELIABLE', label: 'Unreliable input', color: 'rose' };
+        }
 
         setEngineMetrics({
           rul,
           trueRul: engineData.trueRul,
           eolCycle: eol,
-          healthIndex: healthIdx,
+          healthIndex: isUnreliable ? Math.min(healthIdx, 59) : healthIdx,
           band: bandObj.band,
           isWarmup,
+          isUnreliable,
         });
 
         // Compute counterfactual component attribution
