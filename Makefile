@@ -52,3 +52,26 @@ chaos:
 
 clean:
 	rm -rf .tmp_audit reports/model/raw data/edge
+
+# PostgreSQL Tasks
+pg-up:
+	docker compose --profile pg up -d postgres
+
+pg-down:
+	docker compose --profile pg down postgres
+
+pg-psql:
+	PGPASSWORD=twinedge_app_secret docker exec -it twinedge_postgres psql -U twinedge_app -d twinedge
+
+pg-migrate:
+	PYTHONPATH=backend:. $(PYTHON) scripts/migrate.py
+
+pg-backup:
+	@mkdir -p backups
+	@OUT="backups/twinedge_pg_$$(date +%Y%m%d_%H%M%S).dump"; \
+	PGPASSWORD=postgres_master_secret docker exec -e PGPASSWORD=postgres_master_secret twinedge_postgres pg_dump -U postgres -d twinedge -Fc > "$$OUT"; \
+	echo "Backup created at $$OUT"
+
+pg-restore-test:
+	PYTHONPATH=backend:. $(PYTHON) scripts/pg_restore_test.py
+
