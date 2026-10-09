@@ -1,0 +1,197 @@
+{
+  "metadata": {
+    "timestamp": "2026-10-08T08:44:59Z",
+    "onnx_sha256": "032c3efa3156470e5ef7a3f31eb574d2830d4ff473625b6be814a05c0f1a1b7b",
+    "scaler_sha256": "12b873826b644eb88a28bae4f78d43f74a609ee0803f5ab2c506ef6e691aa667"
+  },
+  "headline_reproduction": {
+    "rmse_test_capped": 16.1972,
+    "rmse_test_uncapped": 17.3354,
+    "mae_test_capped": 12.4734,
+    "r2_test_capped": 0.8366,
+    "nasa_test_capped": 452.13,
+    "nasa_test_uncapped": 489.95,
+    "bias_test": 1.2569,
+    "pct_late": 50.0,
+    "pct_early": 50.0
+  },
+  "controls": {
+    "rmse_shuffled_weights": 70.2533,
+    "rmse_noise_weights": 85.373
+  },
+  "baselines": {
+    "constant_mean": {
+      "rmse": 40.5752,
+      "mae": 35.0688,
+      "nasa": 18669.48
+    },
+    "ridge": {
+      "rmse": 15.893,
+      "mae": 12.8927,
+      "nasa": 406.21
+    },
+    "hist_gbm": {
+      "rmse": 14.274,
+      "mae": 10.8919,
+      "nasa": 393.02
+    }
+  },
+  "split_generalization": {
+    "train_rmse": 11.2399,
+    "val_rmse": 15.8106,
+    "test_rmse": 16.1972,
+    "train_to_test_ratio": 0.6939
+  },
+  "spearman_cycle_rul": {
+    "median": -0.943,
+    "mean": -0.938,
+    "min": -0.9847,
+    "max": -0.8854
+  },
+  "permutation_importance": {
+    "s_2": 11.6078,
+    "s_3": 2.9992,
+    "s_4": 2.4177,
+    "s_7": 9.7121,
+    "s_8": 3.9985,
+    "s_9": 1.7566,
+    "s_11": 4.2982,
+    "s_12": 5.6277,
+    "s_13": 24.7058,
+    "s_14": 13.2878,
+    "s_15": 6.5924,
+    "s_17": 2.9898,
+    "s_20": 5.6703,
+    "s_21": 8.3882
+  },
+  "bucket_accuracy": {
+    "0_25": {
+      "count": 19,
+      "rmse": 7.265,
+      "mae": 5.526
+    },
+    "25_50": {
+      "count": 11,
+      "rmse": 10.986,
+      "mae": 9.467
+    },
+    "50_75": {
+      "count": 13,
+      "rmse": 23.503,
+      "mae": 20.443
+    },
+    "75_100": {
+      "count": 23,
+      "rmse": 18.247,
+      "mae": 14.932
+    },
+    "100_125": {
+      "count": 34,
+      "rmse": 16.329,
+      "mae": 12.618
+    }
+  },
+  "bootstrap_95_ci": {
+    "rmse": [
+      13.77,
+      18.506
+    ],
+    "mae": [
+      10.471,
+      14.536
+    ],
+    "nasa": [
+      293.3,
+      633.0
+    ],
+    "diff_vs_ridge": [
+      -1.848,
+      2.29
+    ],
+    "diff_vs_hgb": [
+      0.08,
+      3.775
+    ]
+  },
+  "alert_metrics": {
+    "T_30": {
+      "precision": 0.8834,
+      "recall": 0.8717,
+      "f1": 0.8775,
+      "false_alarm_rate": 0.0239
+    },
+    "T_40": {
+      "precision": 0.8799,
+      "recall": 0.8425,
+      "f1": 0.8608,
+      "false_alarm_rate": 0.0342
+    },
+    "T_50": {
+      "precision": 0.9032,
+      "recall": 0.84,
+      "f1": 0.8705,
+      "false_alarm_rate": 0.0361
+    },
+    "T_60": {
+      "precision": 0.9191,
+      "recall": 0.8425,
+      "f1": 0.8791,
+      "false_alarm_rate": 0.0389
+    },
+    "T_70": {
+      "precision": 0.9354,
+      "recall": 0.8271,
+      "f1": 0.8779,
+      "false_alarm_rate": 0.0383
+    },
+    "T_80": {
+      "precision": 0.9383,
+      "recall": 0.8169,
+      "f1": 0.8734,
+      "false_alarm_rate": 0.0455
+    }
+  },
+  "k_gating_metrics": {
+    "K_1": {
+      "mean_lead_time": 59.6,
+      "median_lead_time": 56.5,
+      "min_lead_time": 33,
+      "missed_engines": 0,
+      "false_alarms_healthy": 2
+    },
+    "K_2": {
+      "mean_lead_time": 55.9,
+      "median_lead_time": 52.5,
+      "min_lead_time": 32,
+      "missed_engines": 0,
+      "false_alarms_healthy": 2
+    },
+    "K_3": {
+      "mean_lead_time": 54.0,
+      "median_lead_time": 50.0,
+      "min_lead_time": 31,
+      "missed_engines": 0,
+      "false_alarms_healthy": 2
+    },
+    "K_4": {
+      "mean_lead_time": 50.8,
+      "median_lead_time": 48.5,
+      "min_lead_time": 23,
+      "missed_engines": 0,
+      "false_alarms_healthy": 2
+    },
+    "K_5": {
+      "mean_lead_time": 49.5,
+      "median_lead_time": 47.5,
+      "min_lead_time": 22,
+      "missed_engines": 0,
+      "false_alarms_healthy": 2
+    }
+  },
+  "noise_robustness": {
+    "sigma_0.05": 0.0978,
+    "sigma_0.1": 0.274,
+    "sigma_0.25": 2.3249,
+    "sigma_0.5": 14.8002
+  }
+}

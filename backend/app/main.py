@@ -205,12 +205,25 @@ def startup_event():
             print("Warning: INFLUXDB_TOKEN not set in test environment, proceeding without InfluxDB connection")
         else:
             raise RuntimeError("CRITICAL CONFIGURATION ERROR: INFLUXDB_TOKEN environment variable is required but not set.")
-    else:
         try:
             influx_client = InfluxDBClient(url=influx_url, token=influx_token, org=os.getenv("INFLUXDB_ORG", "twinedge"))
             print(f"Connected to InfluxDB at {influx_url}")
         except Exception as e:
             print(f"Failed to connect to InfluxDB: {e}")
+
+    # Emit backend_started system event (R3.2)
+    pipeline_instance.emit(
+        level=20,
+        source="backend",
+        event="backend_started",
+        message="TwinEdge backend service started successfully",
+        data={"model": "twinedge_rul_cnn", "dataset": "FD001", "port": 8000},
+        device_id="system",
+        engine_key="SYSTEM",
+        session_id="default",
+        seq=1,
+        ts=time.time()
+    )
 
 last_simulator_mqtt_status = None
 
@@ -678,6 +691,38 @@ async def ingest_batch(items: List[IngestBatchItem], request: Request):
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (dev_id, session_id, engine_key, seq, cycle, inf.get("site", "EDGE"), rul, inf.get("latency_ms", 0.0), twin.get("health_index", 100), twin.get("band", "HEALTHY"), now_ts))
             received_count += 1
+
+            # Extract numeric engine_id from key
+            try:
+                eng_num = int(engine_key.split("-")[1])
+            except Exception:
+                eng_num = 1
+
+            # Run K-gate check (T=60, K=3) into SQLite alerts and audit trail
+            from app.db import record_prediction_and_check_alert
+            alert_created, tripped, a_id = record_prediction_and_check_alert(
+                engine_id=eng_num,
+                cycle=cycle,
+                rul_pred=rul,
+                threshold=60.0,
+                k=3,
+                session_id=session_id,
+                engine_key=engine_key,
+                device_id=dev_id
+            )
+            if alert_created:
+                pipeline_instance.emit(
+                    level=30,
+                    source=f"edge:{dev_id}",
+                    event="alert_raised",
+                    message=f"Sustained alert triggered at cycle {cycle} (RUL={rul:.1f})",
+                    data={"alert_id": a_id, "engine_key": engine_key, "cycle": cycle, "rul": rul},
+                    device_id=dev_id,
+                    engine_key=engine_key,
+                    session_id=session_id,
+                    seq=seq,
+                    ts=now_ts
+                )
 
         elif kind.startswith("event_"):
             ev_kind = kind.replace("event_", "")

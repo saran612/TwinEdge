@@ -53,7 +53,7 @@ export default function LogsPage() {
     fetchLogs();
   }, [levelFilter, sourceFilter]);
 
-  // Live Tail SSE connection
+  // Live Tail SSE connection + fallback polling
   useEffect(() => {
     if (!isLiveTail) {
       if (sseRef.current) {
@@ -65,24 +65,29 @@ export default function LogsPage() {
 
     try {
       const es = new EventSource(`${API_BASE}/stream/fleet`);
-      es.onmessage = (e) => {
+      const handleEvent = (e) => {
         try {
           const item = JSON.parse(e.data);
           setLogs((prev) => [item, ...prev].slice(0, 150));
         } catch {}
       };
+      es.onmessage = handleEvent;
+      es.addEventListener('fleet_event', handleEvent);
       sseRef.current = es;
     } catch (e) {
       console.warn('Logs SSE error:', e);
     }
 
+    const pollTimer = setInterval(fetchLogs, 4000);
+
     return () => {
+      clearInterval(pollTimer);
       if (sseRef.current) {
         sseRef.current.close();
         sseRef.current = null;
       }
     };
-  }, [isLiveTail]);
+  }, [isLiveTail, levelFilter, sourceFilter]);
 
   const exportLogs = () => {
     const jsonStr = JSON.stringify(logs, null, 2);

@@ -13,12 +13,13 @@ from typing import List
 from edge_sim.edge_node import EdgeNode
 from edge_sim.local_api import create_edge_app
 
-def run_node_process(device_id: str, engine_key: str, port: int, rate: float, inference: str, cloud_url: str):
+def run_node_process(device_id: str, engine_key: str, port: int, rate: float, inference: str, cloud_url: str, scenario: str = "lifecycle"):
     node = EdgeNode(
         device_id=device_id,
         engine_key=engine_key,
         inference_policy=inference,
         rate=rate,
+        scenario=scenario,
         cloud_url=cloud_url
     )
     app = create_edge_app(node)
@@ -53,14 +54,17 @@ def main():
     engine_list = [k.strip() for k in args.engines.split(",") if k.strip()]
     processes: List[multiprocessing.Process] = []
 
+    scenarios = ["lifecycle", "degraded-start", "steady"]
+
     for i in range(args.nodes):
         dev_id = f"edge-{i+1:02d}"
         eng = engine_list[i % len(engine_list)]
         port = args.base_port + i
+        scen = scenarios[i % len(scenarios)]
 
         p = multiprocessing.Process(
             target=run_node_process,
-            args=(dev_id, eng, port, args.rate, args.inference, args.cloud_url)
+            args=(dev_id, eng, port, args.rate, args.inference, args.cloud_url, scen)
         )
         p.start()
         processes.append(p)

@@ -57,7 +57,32 @@ export default function AuditPage() {
   useEffect(() => {
     fetchAuditLog();
     verifyChain();
-    api.getGovernanceModel().then(setGovernanceModel).catch(() => {});
+    api.getGovernanceModel()
+      .then(setGovernanceModel)
+      .catch(async () => {
+        // Fallback to static snapshot in /audit/
+        try {
+          const res = await fetch('/audit/audit_metrics.json');
+          if (res.ok) {
+            const data = await res.json();
+            setGovernanceModel({
+              verdict: 'WEAK',
+              allowed_quotes: [
+                { metric: 'Official Test RMSE (Capped)', value: data.headline_reproduction?.rmse_test_capped?.toString() || '16.1972', context: 'C-MAPSS FD001 test split, cap 125' },
+                { metric: 'Official Test MAE (Capped)', value: data.headline_reproduction?.mae_test_capped?.toString() || '12.4734', context: 'C-MAPSS FD001 test split, cap 125' },
+                { metric: 'Model Bias', value: `+${data.headline_reproduction?.bias_test?.toString() || '1.2569'} cycles`, context: 'Positive indicates model overestimates remaining life' },
+              ],
+              forbidden_quotes: [
+                { claim: 'Outperforms classical baselines', reason: 'HistGradientBoosting (14.27) and Ridge (15.89) beat the 1D-CNN (16.19) on identical feature splits.' },
+                { claim: 'Zero False Alarms', reason: '2 of 20 held-out engines false-alert on healthy segments.' }
+              ]
+            });
+          }
+        } catch (e) {
+          console.warn('Offline audit fallback error:', e);
+        }
+      });
+
     api.getGovernanceClaims().then(setGovernanceClaims).catch(() => {});
   }, []);
 
@@ -222,6 +247,21 @@ export default function AuditPage() {
                 ))}
               </div>
             </Card>
+          </div>
+
+          <div className="flex items-center justify-between p-3 rounded-lg bg-surface-2 border border-border text-xs">
+            <span className="text-text-muted">
+              Official Model Audit Snapshot: SHA-256 verified artifact manifest
+            </span>
+            <a
+              href="/audit/MODEL_AUDIT.md"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-accent hover:underline font-mono flex items-center gap-1.5"
+            >
+              <FileCheck className="w-3.5 h-3.5" />
+              <span>View Raw MODEL_AUDIT.md</span>
+            </a>
           </div>
         </div>
       )}

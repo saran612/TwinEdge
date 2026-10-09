@@ -13,6 +13,8 @@ import MethodLimitsPage from './pages/MethodLimitsPage';
 import StyleguidePage from './pages/StyleguidePage';
 import LogsPage from './pages/LogsPage';
 
+import { ErrorBoundary } from './components/common/ErrorBoundary';
+
 export default function App() {
   const getInitialPage = () => {
     const hash = window.location.hash.replace('#/', '').replace('#', '');
@@ -79,7 +81,6 @@ export default function App() {
     }
   };
 
-
   const handleNavigate = (pageId) => {
     setActivePage(pageId);
     window.location.hash = `#/${pageId}`;
@@ -88,7 +89,9 @@ export default function App() {
   return (
     <AppProvider>
       <GlobalShell activePage={activePage} onNavigate={handleNavigate}>
-        {renderActivePage()}
+        <ErrorBoundary key={activePage}>
+          {renderActivePage()}
+        </ErrorBoundary>
       </GlobalShell>
     </AppProvider>
   );

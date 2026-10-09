@@ -93,13 +93,17 @@ export default function TelemetryPage() {
         data.push(pt);
       });
     } else if (engine) {
-      // Replay mode: Read from authentic replay data and exact ONNX evaluated inference
+      // Replay mode: Progressively reveal cycles up to playback cursor currentCycle with rolling window
       const engEval = replayEvaluations[activeEngineKey] ||
         replayEvaluations[String(engine.engine_id)] ||
         replayEvaluations['VAL-001'];
       const predList = engEval?.pred_rul || [];
 
-      for (let c = 1; c <= engine.totalCycles; c++) {
+      // Rolling window of the last 120 cycles up to currentCycle
+      const endCycle = Math.min(engine.totalCycles, Math.max(1, currentCycle));
+      const startCycle = Math.max(1, endCycle - 120);
+
+      for (let c = startCycle; c <= endCycle; c++) {
         const idx = c - 1;
         const rawSensors = engine.sensors[idx];
         const trueR = engine.true_rul[idx];
@@ -281,6 +285,7 @@ export default function TelemetryPage() {
                         fillOpacity={0.14}
                       />
                     )}
+                    <ReferenceLine x={currentCycle} stroke="var(--accent)" strokeDasharray="3 3" strokeWidth={1.5} />
                     <Line type="monotone" dataKey={sId} stroke="var(--chart-1)" dot={false} strokeWidth={1.5} isAnimationActive={false} />
                   </LineChart>
                 </ResponsiveContainer>

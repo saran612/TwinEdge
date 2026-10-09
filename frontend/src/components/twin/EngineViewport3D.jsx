@@ -106,6 +106,20 @@ export default function EngineViewport3D({
     const width = container.clientWidth || 800;
     const height = container.clientHeight || 500;
 
+    const isSafe3D = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('safe3d') === '1';
+    if (isSafe3D) {
+      setIsLoaded(true);
+      setLoadProgress(100);
+      container.innerHTML = `
+        <div style="display:flex;flex-direction:column;align-items:center;justify-center;height:100%;color:var(--text-muted);font-family:monospace;font-size:12px;text-align:center;padding:20px;">
+          <div style="font-weight:600;color:var(--accent);margin-bottom:8px;">SAFE 3D SCHEMATIC MODE ACTIVE (?safe3d=1)</div>
+          <div>Turbofan mesh decoupled for ultra-light presentation stability.</div>
+          <div style="margin-top:10px;font-size:11px;">Components and sensors remain fully interactive via side-panels.</div>
+        </div>
+      `;
+      return;
+    }
+
     // 1. Scene & Camera setup with tuned near/far
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(theme === 'light' ? 0xf8fafc : 0x090d16);

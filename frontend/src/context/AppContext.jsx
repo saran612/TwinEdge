@@ -168,7 +168,7 @@ export function AppProvider({ children }) {
 
     try {
       const es = new EventSource(sseUrl);
-      es.onmessage = (event) => {
+      const handleFrame = (event) => {
         try {
           const data = JSON.parse(event.data);
           addFrameToRing(data);
@@ -179,6 +179,10 @@ export function AppProvider({ children }) {
           console.warn('SSE frame parse error:', e);
         }
       };
+
+      es.onmessage = handleFrame;
+      es.addEventListener('engine_frame', handleFrame);
+      es.addEventListener('fleet_event', handleFrame);
 
       es.onerror = () => {
         es.close();

@@ -81,6 +81,10 @@ demo:
 demo-pg:
 	LOG_SINK=postgres LOG_READ_STORE=postgres ./run_infra.sh
 
+demo-live:
+	@echo "Starting TwinEdge Production Demo Stack (Path A: Live Fleet + SQLite)..."
+	@./scripts/run_demo_live.sh
+
 verify-demo:
 	@echo "Checking TwinEdge services..."
 	@curl -sf http://localhost:8000/health >/dev/null && echo "Backend: GO" || echo "Backend: NO-GO"

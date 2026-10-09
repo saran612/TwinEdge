@@ -61,11 +61,13 @@ export default function EdgeModelPage() {
     setIsBenchmarking(true);
     const latencies = [];
     const dummyWindow = Array.from({ length: 30 }, () => Array(14).fill(100.0));
+    let usedSite = 'EDGE';
 
     try {
       for (let i = 0; i < 100; i++) {
         const res = await runLocalInference(dummyWindow);
         latencies.push(res.latencyMs);
+        if (res.site) usedSite = res.site;
       }
       latencies.sort((a, b) => a - b);
       const p50 = latencies[Math.floor(latencies.length * 0.5)];
@@ -75,6 +77,7 @@ export default function EdgeModelPage() {
         p50: p50.toFixed(2),
         p95: p95.toFixed(2),
         iterations: 100,
+        mode: usedSite === 'EDGE' ? 'WASM Local' : 'Local Backend (HTTP)',
         device: navigator.userAgent.slice(0, 48),
       });
     } catch (err) {
