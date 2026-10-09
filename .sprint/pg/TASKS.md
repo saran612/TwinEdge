@@ -3,7 +3,7 @@
 | ID | Task | Status | Verification | Evidence |
 |---|---|---|---|---|
 | G0 | RECON: Current logging, events, compose, baseline benchmarks | VERIFIED | Script 200 calls p50/p95, curl logs | `.sprint/pg/evidence/g0_baseline.json`, `.sprint/pg/recon.md` |
-| G1 | COMPOSE + SECURITY: pinned postgres:16, 3 roles, scram-sha-256, no prod ports | PENDING | `docker compose config` | `.sprint/pg/evidence/g1_compose_config.txt` |
+| G1 | COMPOSE + SECURITY: pinned postgres:16, 3 roles, scram-sha-256, no prod ports | VERIFIED | `docker compose config`, roles check, no prod ports | `.sprint/pg/evidence/g1_compose_config_prod.txt` |
 | G2 | MIGRATIONS: plain SQL, runner with advisory lock, app_logs, device_heartbeats | PENDING | `make pg-migrate`, idempotency check | `.sprint/pg/evidence/g2_migrations.txt` |
 | G3 | LOG PIPELINE: bounded queue, worker batch, spooler, redaction, rate limiter | PENDING | Unit tests, drop policy, spool replay | `.sprint/pg/evidence/g3_pipeline_test.txt` |
 | G4 | EDGE EVENTS: /ingest edge events & heartbeats mapped to app_logs | PENDING | Ingest idempotency test | `.sprint/pg/evidence/g4_edge_events.txt` |

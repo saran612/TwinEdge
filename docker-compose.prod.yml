@@ -29,19 +29,26 @@ services:
   # Ports 8086 and 1883 are NEVER published to external host interfaces in production.
   # They are internal to the docker bridge network only.
   mosquitto:
-    ports: []
+    ports: !override []
     expose:
       - "1883"
 
   influxdb:
-    ports: []
+    ports: !override []
     expose:
       - "8086"
 
   backend:
-    ports: []
+    ports: !override []
     expose:
       - "8000"
+
+  postgres:
+    ports: !override []
+    expose:
+      - "5432"
+
+
 
 volumes:
   caddy_data:

@@ -67,5 +67,43 @@ services:
     command: ["python3", "app/influx_writer.py"]
     restart: unless-stopped
 
+  postgres:
+    image: postgres:16.8-alpine
+    container_name: twinedge_postgres
+    profiles:
+      - pg
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-twinedge}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres_master_secret}
+      - POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256 --auth-local=scram-sha-256
+      - POSTGRES_APP_USER=${POSTGRES_APP_USER:-twinedge_app}
+      - POSTGRES_APP_PASSWORD=${POSTGRES_APP_PASSWORD:-twinedge_app_secret}
+      - POSTGRES_MIGRATOR_USER=${POSTGRES_MIGRATOR_USER:-twinedge_migrator}
+      - POSTGRES_MIGRATOR_PASSWORD=${POSTGRES_MIGRATOR_PASSWORD:-twinedge_migrator_secret}
+      - POSTGRES_RO_USER=${POSTGRES_RO_USER:-twinedge_ro}
+      - POSTGRES_RO_PASSWORD=${POSTGRES_RO_PASSWORD:-twinedge_ro_secret}
+    command: >
+      postgres
+      -c shared_buffers=128MB
+      -c max_connections=30
+      -c password_encryption=scram-sha-256
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-twinedge}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./deploy/postgres/01-init-roles.sh:/docker-entrypoint-initdb.d/01-init-roles.sh:ro
+    restart: unless-stopped
+
 volumes:
   influxdb_data:
+  postgres_data:
