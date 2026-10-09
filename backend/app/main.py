@@ -25,7 +25,21 @@ from app.db import (
     DB_PATH
 )
 
+from logsink.middleware import pipeline_instance, RequestLoggingMiddleware, LOG_SINK, LOG_READ_STORE
+from logsink.reader import PostgresLogReader
+
+pg_reader = PostgresLogReader(
+    host=os.getenv("POSTGRES_HOST", "127.0.0.1"),
+    port=int(os.getenv("POSTGRES_PORT", "5432")),
+    dbname=os.getenv("POSTGRES_DB", "twinedge"),
+    user=os.getenv("POSTGRES_RO_USER", "twinedge_ro"),
+    password=os.getenv("POSTGRES_RO_PASSWORD", "twinedge_ro_secret")
+)
+
 app = FastAPI(title="TwinEdge Backend")
+
+# Logging & Trace ID Middleware
+app.add_middleware(RequestLoggingMiddleware)
 
 # Enable CORS
 app.add_middleware(
@@ -35,6 +49,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # Root and Config Paths wiring
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -235,7 +250,8 @@ def health():
         "mqtt_broker_online": mqtt_broker_ok,
         "pipeline_bypass": pipeline_bypass,
         "pipeline_mode": "http_bypass" if pipeline_bypass else "mqtt_pipeline",
-        "metadata": metadata
+        "metadata": metadata,
+        "log_sink": pipeline_instance.get_health_stats()
     }
 
 @app.post("/predict")
@@ -664,11 +680,48 @@ async def ingest_batch(items: List[IngestBatchItem], request: Request):
 
         elif kind.startswith("event_"):
             ev_kind = kind.replace("event_", "")
+            ev_msg = d.get("message", f"Edge event: {ev_kind}")
+            ev_data = d.get("data", {})
             cursor.execute("""
                 INSERT INTO stream_events (device_id, session_id, engine_key, seq, kind, message, data, level, source, ts)
                 VALUES (?, ?, ?, ?, ?, ?, ?, 'INFO', 'edge', ?)
-            """, (dev_id, session_id, engine_key, seq, ev_kind, d.get("message", ""), json.dumps(d.get("data", {})), now_ts))
+            """, (dev_id, session_id, engine_key, seq, ev_kind, ev_msg, json.dumps(ev_data), now_ts))
             received_count += 1
+
+            # Route to PostgreSQL log sink asynchronously
+            pipeline_instance.emit(
+                level=20,
+                source=f"edge:{dev_id}",
+                event=ev_kind,
+                message=ev_msg,
+                data=ev_data,
+                device_id=dev_id,
+                engine_key=engine_key,
+                session_id=session_id,
+                seq=seq,
+                ts=now_ts
+            )
+
+        elif kind == "heartbeat":
+            # Extract heartbeat metrics
+            cpu_temp = d.get("cpu_temp")
+            ram_used = d.get("ram_used_mb")
+            link_st = d.get("link_state", "online")
+            q_depth = d.get("queue_depth", 0)
+            p_mode = d.get("power_mode", "normal")
+            clk_synced = d.get("clock_synced", True)
+            pipeline_instance.emit_heartbeat(
+                device_id=dev_id,
+                cpu_temp=cpu_temp,
+                ram_used_mb=ram_used,
+                link_state=link_st,
+                queue_depth=q_depth,
+                power_mode=p_mode,
+                clock_synced=clk_synced,
+                ts=now_ts
+            )
+            received_count += 1
+
 
     conn.commit()
     conn.close()
@@ -797,10 +850,36 @@ async def stream_engine_sse(engine_key: str, request: Request):
     return StreamingResponse(sse_gen(), media_type="text/event-stream")
 
 @app.get("/logs")
-def get_logs(level: Optional[str] = None, source: Optional[str] = None, device: Optional[str] = None, engine: Optional[str] = None, q: Optional[str] = None, limit: int = 100):
+def get_logs(
+    level: Optional[str] = None, 
+    source: Optional[str] = None, 
+    device: Optional[str] = None, 
+    engine: Optional[str] = None, 
+    q: Optional[str] = None, 
+    cursor_id: Optional[int] = None,
+    limit: int = 100
+):
     """
-    Structured logs endpoint from stream_events table.
+    Structured logs endpoint with transparent fallback:
+    Reads from Postgres if LOG_READ_STORE=postgres and pool is healthy;
+    otherwise falls back to SQLite stream_events table.
     """
+    use_pg = (LOG_READ_STORE == "postgres") and pg_reader.is_healthy()
+    if use_pg:
+        try:
+            return pg_reader.query_logs(
+                level=level,
+                source=source,
+                device=device,
+                engine=engine,
+                q=q,
+                cursor_id=cursor_id,
+                limit=limit
+            )
+        except Exception:
+            pass  # Transparent fallback to SQLite
+
+    # SQLite fallback path
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     c = conn.cursor()
@@ -822,6 +901,9 @@ def get_logs(level: Optional[str] = None, source: Optional[str] = None, device: 
     if q:
         query += " AND (message LIKE ? OR kind LIKE ?)"
         params.extend([f"%{q}%", f"%{q}%"])
+    if cursor_id:
+        query += " AND id < ?"
+        params.append(cursor_id)
 
     query += " ORDER BY id DESC LIMIT ?"
     params.append(limit)
@@ -829,7 +911,69 @@ def get_logs(level: Optional[str] = None, source: Optional[str] = None, device: 
     c.execute(query, params)
     rows = c.fetchall()
     conn.close()
-    return [dict(r) for r in rows]
+    
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["store"] = "sqlite"
+        if LOG_READ_STORE == "postgres":
+            d["degraded"] = True
+        out.append(d)
+    return out
+
+@app.get("/logs/stats")
+def get_logs_stats():
+    """
+    Aggregated log statistics (counts by level and source in the last 1 hour).
+    """
+    if (LOG_READ_STORE == "postgres") and pg_reader.is_healthy():
+        try:
+            return pg_reader.get_stats()
+        except Exception:
+            pass
+
+    # SQLite fallback for stats
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    one_hour_ago = time.time() - 3600
+    
+    c.execute("SELECT level, count(*) FROM stream_events WHERE ts >= ? GROUP BY level", (one_hour_ago,))
+    by_level = {r[0]: r[1] for r in c.fetchall()}
+
+    c.execute("SELECT source, count(*) FROM stream_events WHERE ts >= ? GROUP BY source", (one_hour_ago,))
+    by_source = {r[0]: r[1] for r in c.fetchall()}
+    conn.close()
+
+    return {
+        "window": "1h",
+        "by_level": by_level,
+        "by_source": by_source,
+        "store": "sqlite"
+    }
+
+class ClientLogItem(BaseModel):
+    level: Optional[str] = "ERROR"
+    event: Optional[str] = "client_error"
+    message: str
+    data: Optional[Dict[str, Any]] = None
+
+@app.post("/logs/client")
+def post_client_log(item: ClientLogItem, request: Request):
+    """
+    Ingests rate-limited, size-capped client-side frontend errors.
+    """
+    trace_id = request.headers.get("X-Request-ID")
+    lvl = name_to_level(item.level or "ERROR")
+    pipeline_instance.emit(
+        level=lvl,
+        source="frontend",
+        event=item.event or "client_error",
+        message=item.message,
+        data=item.data or {},
+        trace_id=trace_id
+    )
+    return {"status": "accepted"}
+
 
 @app.get("/governance/model")
 def get_governance_model():
